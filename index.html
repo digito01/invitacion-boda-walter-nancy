@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Nuestra Boda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  /* =========================================================
+     ╔═══════════════════════════════════════════════════════╗
+     ║  ZONA EDITABLE #1 — COLORES Y TIPOGRAFÍA               ║
+     ║  Cambia estos valores para ajustar la paleta.          ║
+     ╚═══════════════════════════════════════════════════════╝
+  ========================================================= */
+  :root{
+    --navy-deep:#202c49;
+    --navy:#2e3d63;
+    --navy-soft:#4a5a86;
+    --cream:#f8f2e8;
+    --blush:#f0e4d4;
+    --paper:#fbf7f0;
+    --gold:#ad8a5c;
+    --ink:#332f29;
+    --ink-soft:#6b6459;
+    --line:rgba(46,61,99,0.18);
+    --font-display:'Playfair Display', serif;
+    --font-body:'EB Garamond', serif;
+    --font-label:'Cormorant Garamond', serif;
+    --font-script:'Great Vibes', cursive;
+    --radius:2px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--navy-deep);
+    font-family:var(--font-body);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior:none;
+  }
+  img{max-width:100%;display:block;}
+  button{font-family:inherit;cursor:pointer;}
+  a{color:inherit;}
+
+  /* ---------- layout shell (simulates a phone card on desktop) ---------- */
+  #stage{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    min-height:100dvh;
+    position:relative;
+    background:var(--cream);
+    box-shadow:0 0 60px rgba(0,0,0,0.4);
+    overflow:hidden;
+  }
+
+  /* ---------- envelope intro ---------- */
+  #envelope-screen{
+    position:fixed;inset:0;
+    max-width:480px;margin:0 auto;
+    background:linear-gradient(160deg, var(--navy-deep), var(--navy));
+    display:flex;align-items:center;justify-content:center;
+    z-index:100;
+    cursor:pointer;
+    transition:opacity .9s ease, visibility .9s ease;
+  }
+  #envelope-screen.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+  .envelope{
+    position:relative;
+    width:78%;
+    max-width:320px;
+    aspect-ratio:3/2;
+    perspective:1000px;
+  }
+  .env-body{
+    position:absolute;inset:0;
+    background:linear-gradient(155deg,#33456f,#242f4d);
+    border-radius:4px;
+    box-shadow:0 25px 50px rgba(0,0,0,0.45);
+  }
+  .env-flap{
+    position:absolute;top:0;left:0;right:0;height:62%;
+    background:linear-gradient(155deg,#39507f,#2a3a5f);
+    clip-path:polygon(0 0,100% 0,50% 100%);
+    transform-origin:top center;
+    transition:transform 1s cubic-bezier(.6,.05,.2,1);
+    border-radius:4px 4px 0 0;
+    backface-visibility:hidden;
+  }
+  #envelope-screen.open .env-flap{transform:rotateX(180deg);}
+  .env-seal{
+    position:absolute;top:50%;left:50%;
+    width:70px;height:70px;
+    transform:translate(-50%,-50%);
+    background:radial-gradient(circle at 35% 30%, #4a5d8c, #1c2846 70%);
+    border-radius:50%;
+    box-shadow:0 8px 18px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.15);
+    display:flex;align-items:center;justify-content:center;
+    z-index:5;
+    transition:opacity .5s ease, transform .5s ease;
+  }
+  #envelope-screen.open .env-seal{opacity:0;transform:translate(-50%,-50%) scale(.6);}
+  .env-seal svg{width:34px;height:34px;opacity:.9;}
+  .env-monogram{
+    position:absolute;bottom:16%;left:50%;transform:translateX(-50%);
+    font-family:var(--font-display);
+    letter-spacing:2px;
+    color:rgba(255,255,255,0.55);
+    font-size:15px;
+  }
+  .env-hint{
+    position:absolute;bottom:-46px;left:50%;transform:translateX(-50%);
+    color:rgba(255,255,255,0.6);
+    font-family:var(--font-label);
+    font-size:14px;letter-spacing:2px;text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .env-hint span{display:inline-block;animation:pulse 1.8s infinite ease-in-out;}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+  #admin-entry-link{padding:10px 14px;}
+
+  /* ---------- privacy gate (no valid link) ---------- */
+  #gate-screen{
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:40px 30px;background:var(--cream);
+  }
+  #gate-screen h1{font-family:var(--font-display);font-size:22px;color:var(--navy);margin-bottom:12px;}
+  #gate-screen p{color:var(--ink-soft);font-size:17px;line-height:1.6;}
+
+  /* ---------- general section styling ---------- */
+  .section{
+    padding:clamp(48px,9vw,64px) clamp(22px,6vw,32px);
+    position:relative;
+    text-align:center;
+  }
+  .section + .section{border-top:1px solid var(--line);}
+  .eyebrow{
+    font-family:var(--font-label);
+    text-transform:uppercase;
+    letter-spacing:4px;
+    font-size:clamp(12px,3.2vw,13px);
+    color:var(--gold);
+    margin:0 0 10px;
+  }
+  .display-title{
+    font-family:var(--font-display);
+    font-weight:600;
+    color:var(--navy);
+    font-size:clamp(24px,6.5vw,30px);
+    margin:0 0 6px;
+    line-height:1.25;
+  }
+  .script{font-family:var(--font-script);font-size:clamp(26px,7vw,32px);color:var(--gold);}
+  .body-text{
+    font-family:var(--font-body);
+    font-size:clamp(16px,4vw,18px);
+    line-height:1.7;
+    color:var(--ink-soft);
+    max-width:360px;
+    margin:0 auto;
+  }
+  .divider{
+    width:44px;height:1px;background:var(--gold);
+    margin:22px auto;
+  }
+  .flourish{width:120px;height:auto;margin:0 auto 18px;opacity:.85;}
+
+  /* ---------- hero ---------- */
+  #hero{
+    background:linear-gradient(180deg,var(--navy-deep) 0%, var(--navy-deep) 46%, var(--cream) 46%);
+    padding-top:max(56px, env(safe-area-inset-top));
+    text-align:center;
+  }
+  .hero-inner{color:#fff;padding-bottom:26px;display:flex;flex-direction:column;align-items:center;padding-left:24px;padding-right:24px;}
+  .hero-eyebrow{font-family:var(--font-label);letter-spacing:5px;text-transform:uppercase;font-size:clamp(12px,3.2vw,14px);color:rgba(255,255,255,0.65);margin:0 0 16px;}
+  .hero-names{font-family:var(--font-display);font-size:clamp(32px,10vw,42px);line-height:1.18;margin:0;font-weight:600;}
+  .hero-and{display:block;font-family:var(--font-script);font-size:clamp(24px,6.5vw,32px);color:var(--gold);margin:2px 0;}
+  .guest-line{
+    margin-top:24px;font-family:var(--font-label);font-size:clamp(14px,3.6vw,16px);
+    color:rgba(255,255,255,0.78);letter-spacing:.8px;line-height:1.6;
+    border-top:1px solid rgba(255,255,255,0.18);
+    padding-top:16px;
+  }
+  .guest-line b{color:#fff;font-weight:600;}
+  .hero-photo-wrap{padding:0 28px;margin-top:8px;}
+  .photo-placeholder{
+    width:100%;aspect-ratio:4/5;
+    border:1.5px dashed var(--gold);
+    background:var(--blush);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);font-family:var(--font-label);font-size:14px;
+    text-align:center;padding:20px;line-height:1.5;
+    border-radius:var(--radius);
+  }
+  .hero-photo-wrap img{border-radius:var(--radius);width:100%;aspect-ratio:4/5;object-fit:cover;}
+  .countdown{
+    display:flex;justify-content:center;gap:clamp(8px,3vw,16px);margin:30px 0 8px;
+    flex-wrap:wrap;padding:0 8px;
+  }
+  .cd-box{min-width:56px;flex:0 1 64px;}
+  .cd-num{font-family:var(--font-display);font-size:clamp(22px,6vw,28px);color:var(--navy);font-variant-numeric:tabular-nums;}
+  .cd-label{font-family:var(--font-label);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-soft);margin-top:2px;}
+  .wedding-date{font-family:var(--font-label);font-size:clamp(14px,3.8vw,16px);letter-spacing:2px;color:var(--navy);margin-top:10px;}
+
+  /* ---------- parents ---------- */
+  .parents-grid{display:flex;justify-content:center;gap:clamp(24px,8vw,40px);margin-top:18px;flex-wrap:wrap;}
+  .parents-col{min-width:130px;}
+  .parents-col p{font-family:var(--font-body);font-size:clamp(15px,4vw,17px);color:var(--ink);margin:2px 0;}
+  .parents-col .role{font-family:var(--font-label);font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+
+  /* ---------- ceremony / reception cards ---------- */
+  .venue-icon{width:38px;height:38px;margin:0 auto 14px;color:var(--navy);}
+  .venue-time{font-family:var(--font-display);font-size:clamp(20px,5.5vw,22px);color:var(--navy);margin:8px 0 14px;}
+  .venue-name{font-weight:600;font-size:clamp(17px,4.5vw,18px);color:var(--ink);}
+  .venue-address{font-size:clamp(15px,4vw,16px);color:var(--ink-soft);margin:6px 0 20px;max-width:320px;margin-left:auto;margin-right:auto;}
+  .map-btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;
+    border:1px solid var(--navy);color:var(--navy);
+    padding:10px 26px;font-family:var(--font-label);
+    letter-spacing:1.5px;text-transform:uppercase;font-size:13px;
+    text-decoration:none;border-radius:var(--radius);
+    transition:background .25s, color .25s;
+  }
+  .map-btn:hover{background:var(--navy);color:#fff;}
+  .map-btn:active{background:var(--navy);color:#fff;}
+
+  /* ---------- timeline ---------- */
+  #timeline{background:var(--blush);}
+  .tl-item{position:relative;padding-bottom:38px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-line{position:absolute;top:44px;left:50%;transform:translateX(-50%);width:1px;height:calc(100% - 20px);background:var(--gold);opacity:.5;}
+  .tl-item:last-child .tl-line{display:none;}
+  .tl-icon{width:32px;height:32px;margin:0 auto 10px;color:var(--navy);position:relative;z-index:2;background:var(--blush);}
+  .tl-time{font-family:var(--font-display);font-size:clamp(17px,4.5vw,19px);color:var(--navy);}
+  .tl-label{font-family:var(--font-label);letter-spacing:3px;text-transform:uppercase;font-size:13px;color:var(--ink-soft);margin-top:2px;}
+
+  /* ---------- dress code / gifts ---------- */
+  .info-chip{
+    display:inline-block;border:1px solid var(--gold);color:var(--navy);
+    padding:9px 22px;font-family:var(--font-label);letter-spacing:1px;
+    border-radius:20px;font-size:15px;margin-top:14px;min-height:40px;line-height:22px;
+  }
+  .palette-dots{display:flex;justify-content:center;gap:10px;margin-top:18px;}
+  .palette-dots span{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,0.1);display:inline-block;}
+
+  /* ---------- gallery placeholder ---------- */
+  .gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;}
+  .gallery-grid .photo-placeholder{aspect-ratio:1/1;font-size:12px;}
+
+  /* ---------- RSVP ---------- */
+  #rsvp{background:var(--navy-deep);color:#fff;}
+  #rsvp .eyebrow{color:var(--gold);}
+  #rsvp .display-title{color:#fff;}
+  .rsvp-card{
+    background:var(--paper);color:var(--ink);
+    border-radius:8px;padding:clamp(24px,6vw,30px) clamp(18px,5vw,24px);margin-top:26px;
+    text-align:left;
+  }
+  .rsvp-pass-line{
+    text-align:center;font-family:var(--font-label);font-size:15px;color:var(--ink-soft);
+    margin-bottom:22px;letter-spacing:.5px;
+  }
+  .rsvp-pass-line b{color:var(--navy);}
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-family:var(--font-label);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:7px;}
+  .field select, .field input, .field textarea{
+    width:100%;padding:13px 14px;border:1px solid var(--line);
+    background:var(--cream);font-family:var(--font-body);font-size:16px;
+    border-radius:6px;color:var(--ink);min-height:48px;
+  }
+  .field textarea{resize:vertical;min-height:80px;}
+  .field select, .field input, .field textarea{
+    -webkit-appearance:none;appearance:none;
+  }
+  .field select{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M1 1l6 6 6-6' stroke='%236b6459' stroke-width='1.5' fill='none'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;padding-right:34px;
+  }
+  .submit-btn{
+    width:100%;padding:15px;min-height:50px;background:var(--navy);color:#fff;border:none;
+    font-family:var(--font-label);letter-spacing:2px;text-transform:uppercase;font-size:14px;
+    border-radius:6px;margin-top:8px;transition:background .2s;
+  }
+  .submit-btn:hover{background:var(--navy-soft);}
+  .submit-btn:active{background:var(--navy-soft);}
+  .rsvp-success{text-align:center;padding:24px 6px;}
+  .rsvp-success .check{width:46px;height:46px;margin:0 auto 14px;color:var(--gold);}
+
+  /* ---------- footer ---------- */
+  #footer{padding:clamp(34px,8vw,40px) 30px calc(50px + env(safe-area-inset-bottom));color:rgba(255,255,255,0.55);background:var(--navy-deep);text-align:center;}
+  #footer .script{color:var(--gold);}
+  #footer .hashtag{font-family:var(--font-label);letter-spacing:2px;margin-top:8px;font-size:14px;}
+
+  /* ---------- admin ---------- */
+  #admin-root{max-width:900px;margin:0 auto;padding:30px 20px 80px;font-family:var(--font-body);background:var(--cream);min-height:100vh;}
+  #admin-root h1{font-family:var(--font-display);color:var(--navy);}
+  .admin-card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:22px;margin-bottom:24px;}
+  .admin-card h2{font-family:var(--font-display);font-size:20px;color:var(--navy);margin-top:0;}
+  .admin-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+  .admin-field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:160px;}
+  .admin-field label{font-size:13px;color:var(--ink-soft);}
+  .admin-field input{padding:10px;border:1px solid var(--line);border-radius:4px;font-size:15px;}
+  .admin-btn{background:var(--navy);color:#fff;border:none;padding:11px 20px;border-radius:4px;font-size:14px;letter-spacing:.5px;}
+  .admin-btn.secondary{background:var(--gold);}
+  .admin-link-box{
+    margin-top:14px;padding:12px 14px;background:var(--blush);border-radius:4px;
+    font-size:14px;word-break:break-all;display:flex;justify-content:space-between;gap:10px;align-items:center;
+  }
+  table.admin-table{width:100%;border-collapse:collapse;font-size:14px;}
+  table.admin-table th, table.admin-table td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;}
+  table.admin-table th{color:var(--ink-soft);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.5px;}
+  .status-pill{padding:3px 10px;border-radius:12px;font-size:12px;display:inline-block;}
+  .status-yes{background:#dcefe0;color:#2c7a43;}
+  .status-no{background:#f4dede;color:#b23c3c;}
+  .status-pending{background:#eee;color:#888;}
+  .admin-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+  .admin-pass-gate{max-width:340px;margin:100px auto;text-align:center;padding:30px;background:#fff;border-radius:6px;border:1px solid var(--line);}
+  .admin-pass-gate input{width:100%;padding:10px;margin:14px 0;border:1px solid var(--line);border-radius:4px;}
+  .small-note{font-size:12.5px;color:var(--ink-soft);margin-top:6px;}
+  .empty-state{color:var(--ink-soft);font-size:14px;padding:18px 0;text-align:center;}
+
+  @media (max-width:380px){
+    .parents-grid{gap:20px;}
+    .countdown{gap:10px;}
+    .cd-box{min-width:48px;flex:0 1 52px;}
+  }
+
+  @media (max-height:700px){
+    #hero{padding-top:max(34px, env(safe-area-inset-top));}
+    .hero-inner{padding-bottom:16px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .env-flap, .env-seal, #envelope-screen{transition-duration:.01ms !important;}
+  }
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     ╔═══════════════════════════════════════════════════════╗
+     ║  ZONA EDITABLE #2 — TODO EL CONTENIDO DE LA BODA       ║
+     ║  Edita textos, fechas, direcciones y activa/desactiva  ║
+     ║  secciones cambiando `enabled: true/false`.            ║
+     ║  Para fotos: reemplaza el bloque placeholder por       ║
+     ║  <img src="tu-foto.jpg"> donde se indica en el JS.     ║
+     ╚═══════════════════════════════════════════════════════╝
+========================================================= -->
+<script>
+let CONFIG = {
+  // Contraseña simple para entrar al panel admin (?admin=1). No es seguridad robusta,
+  // solo evita que un invitado curioso entre por accidente.
+  adminPassword: "boda2026",
+
+  couple: {
+    groom: "Gustavo",
+    bride: "Nancy",
+    monogram: "G & N"
+  },
+
+  // Fecha y hora de la boda — EDITA ESTA LÍNEA (formato AAAA-MM-DDTHH:MM:SS)
+  weddingDate: "2026-11-20T18:00:00",
+
+  hero: {
+    eyebrow: "Nuestra Boda",
+    // Deja vacío hasta que tengas la foto real: heroPhoto: "" -> se muestra un placeholder
+    heroPhoto: "",
+    welcomeMessage: "Con inmensa alegría en nuestros corazones, y acompañados por nuestras familias, queremos invitarte a celebrar el inicio de nuestra nueva vida juntos."
+  },
+
+  parents: {
+    enabled: true,
+    title: "Con la bendición de nuestros padres",
+    groom: ["Nombre del Padre", "Nombre de la Madre"],
+    bride: ["Nombre del Padre", "Nombre de la Madre"]
+  },
+
+  ceremony: {
+    enabled: true,
+    title: "Ceremonia",
+    time: "6:00 PM",
+    venueName: "Parroquia San Francisco",
+    address: "Calle Principal 123, Colonia Centro",
+    mapsUrl: "https://maps.google.com/?q=Parroquia+San+Francisco"
+  },
+
+  reception: {
+    enabled: true,
+    title: "Recepción",
+    time: "8:00 PM",
+    venueName: "Salón Jardín Las Flores",
+    address: "Av. Los Robles 456, Tegucigalpa",
+    mapsUrl: "https://maps.google.com/?q=Salon+Jardin+Las+Flores"
+  },
+
+  timeline: {
+    enabled: true,
+    title: "Itinerario",
+    items: [
+      { time: "9:00 PM",  label: "Recepción", icon: "guests" },
+      { time: "10:00 PM", label: "Cena",       icon: "toast"  },
+      { time: "10:30 PM", label: "Fiesta",     icon: "music"  }
+      // Agrega o quita objetos en este arreglo para editar el itinerario.
+    ]
+  },
+
+  dressCode: {
+    enabled: true,
+    title: "Código de Vestimenta",
+    style: "Formal / Elegante",
+    note: "Sugerimos evitar el color blanco y el azul marino, reservados para la novia y el cortejo.",
+    palette: ["#2e3d63", "#ad8a5c", "#f0e4d4", "#7a8ba0"]
+  },
+
+  giftTable: {
+    enabled: true,
+    title: "Mesa de Regalos",
+    message: "Tu presencia es nuestro mejor regalo. Si deseas tener un detalle con nosotros, aquí tienes algunas opciones:",
+    options: [
+      { label: "Liverpool", value: "Mesa de regalos: 12345678" },
+      { label: "Sobre / Efectivo", value: "También lo recibimos con mucho cariño" }
+    ]
+  },
+
+  gallery: {
+    enabled: false, // cámbialo a true cuando tengas fotos para mostrar
+    title: "Nuestra Historia",
+    photos: 4 // número de placeholders a mostrar
+  },
+
+  rsvp: {
+    enabled: true,
+    title: "Confirma tu Asistencia",
+    deadline: "1 de Octubre, 2026",
+    thankYouMessage: "¡Gracias por confirmar! Estamos felices de celebrar contigo."
+  },
+
+  footer: {
+    hashtag: "#GustavoYNancy2026"
+  }
+};
+
+// Íconos SVG (dibujo original, sin marcas registradas)
+const ICONS = {
+  church: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M24 6v6M20 12h8M10 44V24l14-9 14 9v20"/><path d="M10 44h28"/><path d="M20 44V30h8v14"/></svg>`,
+  hall: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 44h36M8 44V20l16-10 16 10v24"/><path d="M18 44V28h12v16"/></svg>`,
+  guests: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="24" cy="16" r="6"/><circle cx="10" cy="20" r="5"/><circle cx="38" cy="20" r="5"/><path d="M6 40c0-7 6-11 18-11s18 4 18 11"/></svg>`,
+  toast: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 8l4 16a4 4 0 004 3 4 4 0 004-3l4-16" transform="translate(-4)"/><path d="M32 8l4 16a4 4 0 004 3 4 4 0 004-3l4-16" transform="translate(-4)"/><path d="M18 27v13M30 27v13M14 44h30"/></svg>`,
+  music: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 34V10l20-4v24"/><circle cx="14" cy="36" r="5"/><circle cx="34" cy="30" r="5"/></svg>`,
+  seal: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M24 8c3 5 3 8 0 11-3-3-3-6 0-11zM24 8c-3 5-8 6-11 4 1-4 5-6 11-4zM24 8c3 5 8 6 11 4-1-4-5-6-11-4z"/><path d="M13 18c3-2 8-2 11 1 3-3 8-3 11-1-1 5-6 9-11 9s-10-4-11-9z"/></svg>`,
+  check: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><circle cx="24" cy="24" r="20"/><path d="M15 24l6 6 12-13"/></svg>`
+};
+</script>
+
+<!-- pantalla de sobre -->
+<div id="envelope-screen">
+  <div class="envelope" id="envelope">
+    <div class="env-body"></div>
+    <div class="env-flap"></div>
+    <div class="env-seal" id="env-seal-icon"></div>
+    <div class="env-monogram" id="env-monogram"></div>
+    <div class="env-hint"><span>Toca para abrir</span></div>
+  </div>
+  <div id="admin-entry-link" style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.4);font-family:var(--font-label);font-size:12px;letter-spacing:1.5px;text-decoration:underline;cursor:pointer;">Panel administrador</div>
+</div>
+
+<div id="stage" style="display:none;">
+  <div id="app"></div>
+</div>
+
+<div id="gate-screen" style="display:none;">
+  <h1>Invitación privada</h1>
+  <p>Este enlace no corresponde a una invitación válida.<br>Por favor utiliza el enlace personal que recibiste de los novios.</p>
+</div>
+
+<div id="admin-root" style="display:none;"></div>
+
+<script>
+/* =========================================================
+   MOTOR DE LA APLICACIÓN — no necesitas editar de aquí
+   hacia abajo salvo que quieras cambiar el comportamiento.
+========================================================= */
+
+// ---------- almacenamiento con respaldo (funciona dentro y fuera de Claude) ----------
+const hasCloudStorage = () => (typeof window.storage !== "undefined" && window.storage !== null);
+
+async function storeGet(key, shared=true){
+  try{
+    if(hasCloudStorage()){
+      const r = await window.storage.get(key, shared);
+      return r ? JSON.parse(r.value) : null;
+    } else {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    }
+  }catch(e){ return null; }
+}
+async function storeSet(key, value, shared=true){
+  try{
+    if(hasCloudStorage()){
+      await window.storage.set(key, JSON.stringify(value), shared);
+    } else {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+    return true;
+  }catch(e){ console.error("storage error", e); return false; }
+}
+async function storeList(prefix, shared=true){
+  try{
+    if(hasCloudStorage()){
+      const r = await window.storage.list(prefix, shared);
+      return r ? r.keys : [];
+    } else {
+      return Object.keys(localStorage).filter(k => k.startsWith(prefix));
+    }
+  }catch(e){ return []; }
+}
+
+// ---------- utilidades ----------
+function qs(name){ return new URLSearchParams(window.location.search).get(name); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s){ return (s||"").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---------- resolución del invitado a partir del link ----------
+async function resolveGuest(){
+  const id = qs("id");
+  const nombre = qs("invitado");
+  const pases = qs("pases");
+
+  if(id){
+    const g = await storeGet("guests:" + id, true);
+    if(g) return g;
+    return null; // link con id pero no existe -> invitación inválida
+  }
+  if(nombre){
+    // modo rápido manual, sin guardar en el panel admin
+    return { id: null, name: decodeURIComponent(nombre.replace(/\+/g," ")), passes: pases ? parseInt(pases) : 1 };
+  }
+  return null;
+}
+
+// ---------- secciones ----------
+function heroSection(guest){
+  const h = CONFIG.hero, c = CONFIG.couple;
+  const photo = h.heroPhoto
+    ? `<img src="${esc(h.heroPhoto)}" alt="${esc(c.groom)} y ${esc(c.bride)}">`
+    : `<div class="photo-placeholder">FOTO PRINCIPAL<br>Reemplaza este bloque por tu foto de pareja<br>(recomendado 4:5, vertical)</div>`;
+  return `
+  <section id="hero">
+    <div class="hero-inner">
+      <p class="hero-eyebrow">${esc(h.eyebrow)}</p>
+      <h1 class="hero-names">${esc(c.groom)}<span class="hero-and">and</span>${esc(c.bride)}</h1>
+      <div class="guest-line">Pase reservado para<br><b>${esc(guest.name)}</b> ${guest.passes ? `· ${guest.passes} ${guest.passes==1?'persona':'personas'}` : ''}</div>
+    </div>
+    <div class="hero-photo-wrap">${photo}</div>
+    <div style="padding:30px 28px 10px;">
+      <p class="body-text">${esc(h.welcomeMessage)}</p>
+      <div class="countdown" id="countdown"></div>
+      <div class="wedding-date" id="wedding-date-label"></div>
+    </div>
+  </section>`;
+}
+
+function parentsSection(){
+  const p = CONFIG.parents;
+  if(!p.enabled) return "";
+  return `
+  <section class="section" id="parents">
+    <p class="eyebrow">Nuestras Familias</p>
+    <h2 class="display-title">${esc(p.title)}</h2>
+    <div class="divider"></div>
+    <div class="parents-grid">
+      <div class="parents-col">
+        <p class="role">Padres del Novio</p>
+        <p>${esc(p.groom[0]||"")}</p>
+        <p>${esc(p.groom[1]||"")}</p>
+      </div>
+      <div class="parents-col">
+        <p class="role">Padres de la Novia</p>
+        <p>${esc(p.bride[0]||"")}</p>
+        <p>${esc(p.bride[1]||"")}</p>
+      </div>
+    </div>
+  </section>`;
+}
+
+function venueSection(v, iconKey, id){
+  if(!v.enabled) return "";
+  return `
+  <section class="section" id="${id}">
+    <div class="venue-icon">${ICONS[iconKey]}</div>
+    <p class="eyebrow">${esc(v.title)}</p>
+    <div class="venue-time">${esc(v.time)}</div>
+    <div class="venue-name">${esc(v.venueName)}</div>
+    <div class="venue-address">${esc(v.address)}</div>
+    <a class="map-btn" href="${esc(v.mapsUrl)}" target="_blank" rel="noopener">Ver ubicación</a>
+  </section>`;
+}
+
+function timelineSection(){
+  const t = CONFIG.timeline;
+  if(!t.enabled) return "";
+  const items = t.items.map(it => `
+    <div class="tl-item">
+      <div class="tl-line"></div>
+      <div class="tl-icon">${ICONS[it.icon] || ICONS.guests}</div>
+      <div class="tl-time">${esc(it.time)}</div>
+      <div class="tl-label">${esc(it.label)}</div>
+    </div>`).join("");
+  return `
+  <section class="section" id="timeline">
+    <p class="eyebrow">Programa</p>
+    <h2 class="display-title">${esc(t.title)}</h2>
+    <div class="divider"></div>
+    <div style="margin-top:26px;">${items}</div>
+  </section>`;
+}
+
+function dressCodeSection(){
+  const d = CONFIG.dressCode;
+  if(!d.enabled) return "";
+  const dots = d.palette.map(c => `<span style="background:${esc(c)}"></span>`).join("");
+  return `
+  <section class="section" id="dresscode">
+    <p class="eyebrow">Vestimenta</p>
+    <h2 class="display-title">${esc(d.title)}</h2>
+    <div class="info-chip">${esc(d.style)}</div>
+    <p class="body-text" style="margin-top:18px;">${esc(d.note)}</p>
+    <div class="palette-dots">${dots}</div>
+  </section>`;
+}
+
+function giftSection(){
+  const g = CONFIG.giftTable;
+  if(!g.enabled) return "";
+  const opts = g.options.map(o => `<p style="font-family:var(--font-body);font-size:17px;margin:6px 0;"><b>${esc(o.label)}:</b> ${esc(o.value)}</p>`).join("");
+  return `
+  <section class="section" id="gifts">
+    <p class="eyebrow">Con Cariño</p>
+    <h2 class="display-title">${esc(g.title)}</h2>
+    <p class="body-text">${esc(g.message)}</p>
+    <div style="margin-top:16px;">${opts}</div>
+  </section>`;
+}
+
+function gallerySection(){
+  const gal = CONFIG.gallery;
+  if(!gal.enabled) return "";
+  const uploaded = gal.photoUrls || [];
+  let grid = "";
+  if(uploaded.length){
+    grid = uploaded.map(src => `<div class="photo-placeholder" style="border:none;padding:0;"><img src="${src}" style="width:100%;height:100%;object-fit:cover;"></div>`).join("");
+  } else {
+    for(let i=0;i<(gal.photos||4);i++){
+      grid += `<div class="photo-placeholder">FOTO ${i+1}<br>agrega desde el panel admin</div>`;
+    }
+  }
+  return `
+  <section class="section" id="gallery">
+    <p class="eyebrow">Recuerdos</p>
+    <h2 class="display-title">${esc(gal.title)}</h2>
+    <div class="gallery-grid">${grid}</div>
+  </section>`;
+}
+
+function rsvpSection(guest){
+  const r = CONFIG.rsvp;
+  if(!r.enabled) return "";
+  const maxPasses = guest.passes || 1;
+  let passOptions = `<option value="0">No podremos asistir</option>`;
+  for(let i=1;i<=maxPasses;i++){
+    passOptions += `<option value="${i}">${i} ${i==1?'persona':'personas'}</option>`;
+  }
+  return `
+  <section class="section" id="rsvp">
+    <p class="eyebrow">Antes del ${esc(r.deadline)}</p>
+    <h2 class="display-title">${esc(r.title)}</h2>
+    <div class="rsvp-card" id="rsvp-card">
+      <div class="rsvp-pass-line">Tienes <b>${maxPasses}</b> ${maxPasses==1?'pase':'pases'} reservados a tu nombre</div>
+      <form id="rsvp-form">
+        <div class="field">
+          <label>¿Nos acompañarás?</label>
+          <select id="f-attend">${passOptions}</select>
+        </div>
+        <div class="field">
+          <label>Nombre de los asistentes</label>
+          <input type="text" id="f-names" placeholder="${esc(guest.name)}" required>
+        </div>
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="tel" id="f-phone" placeholder="Tu número de contacto">
+        </div>
+        <div class="field">
+          <label>Mensaje para los novios</label>
+          <textarea id="f-message" placeholder="Escribe unas palabras..."></textarea>
+        </div>
+        <button type="submit" class="submit-btn">Enviar confirmación</button>
+      </form>
+    </div>
+  </section>`;
+}
+
+function footerSection(){
+  const c = CONFIG.couple;
+  return `
+  <section id="footer">
+    <div class="script">${esc(c.groom)} &amp; ${esc(c.bride)}</div>
+    <div class="hashtag">${esc(CONFIG.footer.hashtag)}</div>
+  </section>`;
+}
+
+// ---------- render principal ----------
+async function renderInvitation(guest){
+  const app = document.getElementById("app");
+  app.innerHTML = [
+    heroSection(guest),
+    parentsSection(),
+    venueSection(CONFIG.ceremony, "church", "ceremony"),
+    venueSection(CONFIG.reception, "hall", "reception"),
+    timelineSection(),
+    dressCodeSection(),
+    giftSection(),
+    gallerySection(),
+    rsvpSection(guest),
+    footerSection()
+  ].join("");
+
+  startCountdown();
+
+  const form = document.getElementById("rsvp-form");
+  if(form){
+    // pre-fill si ya había respondido antes (mismo id de invitado)
+    if(guest.id){
+      const prev = await storeGet("rsvps:" + guest.id, true);
+      if(prev){
+        document.getElementById("f-attend").value = prev.attending;
+        document.getElementById("f-names").value = prev.names || "";
+        document.getElementById("f-phone").value = prev.phone || "";
+        document.getElementById("f-message").value = prev.message || "";
+      }
+    }
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        guestId: guest.id,
+        guestName: guest.name,
+        attending: document.getElementById("f-attend").value,
+        names: document.getElementById("f-names").value,
+        phone: document.getElementById("f-phone").value,
+        message: document.getElementById("f-message").value,
+        respondedAt: new Date().toISOString()
+      };
+      const key = "rsvps:" + (guest.id || uid());
+      await storeSet(key, data, true);
+      document.getElementById("rsvp-card").innerHTML = `
+        <div class="rsvp-success">
+          <div class="check">${ICONS.check}</div>
+          <p class="body-text" style="margin:0;">${esc(CONFIG.rsvp.thankYouMessage)}</p>
+        </div>`;
+    });
+  }
+}
+
+function startCountdown(){
+  const target = new Date(CONFIG.weddingDate).getTime();
+  const box = document.getElementById("countdown");
+  const dateLabel = document.getElementById("wedding-date-label");
+  if(!box) return;
+  dateLabel.textContent = new Date(CONFIG.weddingDate).toLocaleDateString("es-ES", {day:'numeric', month:'long', year:'numeric'});
+
+  function tick(){
+    const now = Date.now();
+    let diff = Math.max(0, target - now);
+    const d = Math.floor(diff/86400000);
+    const h = Math.floor((diff%86400000)/3600000);
+    const m = Math.floor((diff%3600000)/60000);
+    const s = Math.floor((diff%60000)/1000);
+    box.innerHTML = [
+      [d,"Días"],[h,"Horas"],[m,"Min"],[s,"Seg"]
+    ].map(([v,l]) => `<div class="cd-box"><div class="cd-num">${String(v).padStart(2,'0')}</div><div class="cd-label">${l}</div></div>`).join("");
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ---------- sobre / intro ----------
+function revealTarget(targetId, displayValue){
+  const screen = document.getElementById("envelope-screen");
+  screen.classList.add("open");
+  setTimeout(() => {
+    screen.classList.add("hidden");
+    document.getElementById(targetId).style.display = displayValue;
+    window.scrollTo(0,0);
+  }, 750);
+}
+
+function setupEnvelope(onOpen){
+  document.getElementById("env-seal-icon").innerHTML = ICONS.seal;
+  document.getElementById("env-monogram").textContent = CONFIG.couple.monogram;
+  const screen = document.getElementById("envelope-screen");
+  screen.addEventListener("click", onOpen, { once: true });
+
+  document.getElementById("admin-entry-link").addEventListener("click", (e) => {
+    e.stopPropagation();
+    document.getElementById("envelope-screen").classList.add("hidden");
+    document.getElementById("admin-root").style.display = "block";
+    initAdmin();
+  });
+}
+
+// ---------- arranque ----------
+async function boot(){
+  // Carga el contenido guardado desde el panel admin (si existe) antes de todo lo demás.
+  const savedConfig = await storeGet("site-config", true);
+  if(savedConfig) CONFIG = savedConfig;
+
+  // Modo admin: entra directo, sin sobre.
+  if(qs("admin") === "1" || qs("admin") === "true"){
+    document.getElementById("envelope-screen").classList.add("hidden");
+    document.getElementById("admin-root").style.display = "block";
+    initAdmin();
+    return;
+  }
+
+  const guest = await resolveGuest();
+
+  if(!guest){
+    // El sobre igual se puede tocar; al abrirse revela el mensaje de invitación privada.
+    setupEnvelope(() => revealTarget("gate-screen", "flex"));
+    return;
+  }
+
+  await renderInvitation(guest);
+  setupEnvelope(() => revealTarget("stage", "block"));
+}
+boot();
+
+/* =========================================================
+   PANEL ADMIN
+========================================================= */
+function adminBaseUrl(){
+  return window.location.origin + window.location.pathname;
+}
+
+// Convierte una foto subida por el usuario en un dataURL comprimido (sin necesitar un link externo)
+function fileToCompressedDataURL(file, maxDim=1400, quality=0.82){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("No se pudo procesar la imagen"));
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim){
+          if(w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function initAdmin(){
+  const root = document.getElementById("admin-root");
+  // NOTA: la contraseña está desactivada temporalmente para que puedas explorar el panel
+  // libremente mientras lo pruebas. Para reactivarla, cambia esta línea de vuelta a:
+  // const authed = sessionStorage.getItem("admin-ok") === "1";
+  const authed = true;
+  if(!authed){
+    root.innerHTML = `
+      <div class="admin-pass-gate">
+        <h2 style="font-family:var(--font-display);color:var(--navy);">Panel de administración</h2>
+        <input type="password" id="admin-pass" placeholder="Contraseña">
+        <button class="admin-btn" id="admin-login" style="width:100%;">Entrar</button>
+        <p class="small-note">Cambia la contraseña en CONFIG.adminPassword dentro del código.</p>
+      </div>`;
+    document.getElementById("admin-login").onclick = () => {
+      if(document.getElementById("admin-pass").value === CONFIG.adminPassword){
+        sessionStorage.setItem("admin-ok","1");
+        initAdmin();
+      } else {
+        alert("Contraseña incorrecta");
+      }
+    };
+    return;
+  }
+
+  root.innerHTML = `
+    <div class="admin-topbar">
+      <h1>Panel de la Boda — ${esc(CONFIG.couple.groom)} &amp; ${esc(CONFIG.couple.bride)}</h1>
+      <div style="display:flex;gap:10px;">
+        <a class="admin-btn secondary" style="text-decoration:none;display:inline-flex;align-items:center;" href="${adminBaseUrl()}?invitado=Vista+Previa&pases=2" target="_blank">Vista previa</a>
+        <button class="admin-btn secondary" id="export-btn">Exportar a Excel</button>
+        <button class="admin-btn" id="logout-btn" style="background:#888;">Cerrar sesión</button>
+      </div>
+    </div>
+
+    ${!hasCloudStorage() ? `<div class="admin-card" style="background:#fff6e0;border-color:#e0c98a;">
+      <b>Aviso:</b> este archivo se está ejecutando fuera de Claude, así que los datos se guardan solo en este navegador (no se comparten entre dispositivos). Para que los invitados y tú vean la misma información desde cualquier celular, comparte esta página como un artefacto publicado de Claude.
+    </div>` : ""}
+
+    <div class="admin-card" style="background:var(--blush);border-color:var(--gold);">
+      <h2>Editar contenido de la invitación</h2>
+      <p class="small-note" style="margin-top:0;">Aquí puedes cambiar cualquier texto, fecha, dirección o sección sin tocar código. Los cambios se guardan para todos los que abran el enlace.</p>
+
+      <div class="admin-row" style="margin-bottom:16px;">
+        <div class="admin-field"><label>Nombre del novio</label><input id="qe-groom" type="text"></div>
+        <div class="admin-field"><label>Nombre de la novia</label><input id="qe-bride" type="text"></div>
+        <div class="admin-field" style="max-width:120px;"><label>Monograma</label><input id="qe-monogram" type="text"></div>
+      </div>
+      <div class="admin-row" style="margin-bottom:16px;">
+        <div class="admin-field"><label>Fecha y hora de la boda</label><input id="qe-date" type="datetime-local"></div>
+        <div class="admin-field" style="max-width:160px;"><label>Contraseña del panel</label><input id="qe-password" type="text"></div>
+      </div>
+      <div class="admin-row" style="margin-bottom:20px;">
+        <button class="admin-btn" id="save-quick-btn">Guardar estos cambios</button>
+        <span id="quick-save-msg" class="small-note"></span>
+      </div>
+
+      <details>
+        <summary style="cursor:pointer;font-family:var(--font-label);letter-spacing:1px;color:var(--navy);">Editor avanzado (todas las secciones: padres, ceremonia, recepción, itinerario, vestimenta, mesa de regalos, galería, RSVP, footer)</summary>
+        <p class="small-note">Edita el objeto de configuración completo en formato JSON. Activa o desactiva secciones con <code>"enabled": true</code> / <code>false</code>, agrega o quita elementos de listas como el itinerario, y cambia cualquier texto o URL de foto.</p>
+        <textarea id="json-editor" style="width:100%;min-height:380px;font-family:monospace;font-size:13px;padding:14px;border:1px solid var(--line);border-radius:4px;"></textarea>
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+          <button class="admin-btn" id="save-json-btn">Guardar todo</button>
+          <span id="json-save-msg" class="small-note"></span>
+        </div>
+      </details>
+    </div>
+
+    <div class="admin-card">
+      <h2>Fotos</h2>
+      <p class="small-note" style="margin-top:0;">Sube las fotos directamente desde tu computadora o celular — se guardan dentro de la invitación, sin necesitar un enlace externo.</p>
+
+      <div style="margin-bottom:26px;">
+        <label style="display:block;font-family:var(--font-label);font-size:14px;color:var(--ink-soft);margin-bottom:8px;">Foto principal (portada)</label>
+        <div id="hero-photo-preview" style="width:140px;aspect-ratio:4/5;border:1.5px dashed var(--gold);background:var(--blush);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink-soft);text-align:center;margin-bottom:10px;overflow:hidden;"></div>
+        <input type="file" id="hero-photo-input" accept="image/*">
+        <button class="admin-btn" style="background:#888;margin-left:8px;" id="hero-photo-remove">Quitar</button>
+        <span id="hero-photo-msg" class="small-note"></span>
+      </div>
+
+      <div>
+        <label style="display:block;font-family:var(--font-label);font-size:14px;color:var(--ink-soft);margin-bottom:8px;">
+          Galería <input type="checkbox" id="gallery-enabled-toggle"> Mostrar sección de galería
+        </label>
+        <input type="file" id="gallery-photo-input" accept="image/*" multiple>
+        <span id="gallery-photo-msg" class="small-note"></span>
+        <div id="gallery-photo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:14px;max-width:520px;"></div>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Generar nueva invitación</h2>
+      <div class="admin-row">
+        <div class="admin-field">
+          <label>Nombre del invitado / familia</label>
+          <input type="text" id="new-guest-name" placeholder="Fam. Martínez Ramírez">
+        </div>
+        <div class="admin-field" style="max-width:120px;">
+          <label>Pases</label>
+          <input type="number" id="new-guest-passes" value="2" min="1">
+        </div>
+        <button class="admin-btn" id="new-guest-btn">Generar enlace</button>
+      </div>
+      <div id="new-link-result"></div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Invitados y respuestas</h2>
+      <div id="guests-table"><p class="empty-state">Cargando…</p></div>
+    </div>
+  `;
+
+  // pre-fill quick fields
+  document.getElementById("qe-groom").value = CONFIG.couple.groom;
+  document.getElementById("qe-bride").value = CONFIG.couple.bride;
+  document.getElementById("qe-monogram").value = CONFIG.couple.monogram;
+  document.getElementById("qe-password").value = CONFIG.adminPassword;
+  const d = new Date(CONFIG.weddingDate);
+  const pad = n => String(n).padStart(2,"0");
+  document.getElementById("qe-date").value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  document.getElementById("json-editor").value = JSON.stringify(CONFIG, null, 2);
+
+  document.getElementById("save-quick-btn").onclick = async () => {
+    CONFIG.couple.groom = document.getElementById("qe-groom").value;
+    CONFIG.couple.bride = document.getElementById("qe-bride").value;
+    CONFIG.couple.monogram = document.getElementById("qe-monogram").value;
+    CONFIG.adminPassword = document.getElementById("qe-password").value;
+    const dtVal = document.getElementById("qe-date").value;
+    if(dtVal) CONFIG.weddingDate = dtVal + ":00";
+    await storeSet("site-config", CONFIG, true);
+    document.getElementById("json-editor").value = JSON.stringify(CONFIG, null, 2);
+    document.getElementById("quick-save-msg").textContent = "Guardado ✓";
+    setTimeout(() => document.getElementById("quick-save-msg").textContent = "", 2500);
+  };
+
+  document.getElementById("save-json-btn").onclick = async () => {
+    const msg = document.getElementById("json-save-msg");
+    try{
+      const parsed = JSON.parse(document.getElementById("json-editor").value);
+      CONFIG = parsed;
+      await storeSet("site-config", CONFIG, true);
+      msg.textContent = "Guardado ✓ (recarga la vista previa para verlo)";
+      msg.style.color = "#2c7a43";
+    }catch(e){
+      msg.textContent = "Error: el JSON no es válido. Revisa comas y llaves.";
+      msg.style.color = "#b23c3c";
+    }
+    setTimeout(() => { msg.textContent = ""; }, 4000);
+  };
+
+  document.getElementById("logout-btn").onclick = () => {
+    sessionStorage.removeItem("admin-ok");
+    initAdmin();
+  };
+
+  document.getElementById("new-guest-btn").onclick = createGuest;
+  document.getElementById("export-btn").onclick = exportExcel;
+  setupPhotoControls();
+  await loadGuestsTable();
+}
+
+function setupPhotoControls(){
+  // ---- foto principal ----
+  const heroPreview = document.getElementById("hero-photo-preview");
+  function renderHeroPreview(){
+    heroPreview.innerHTML = CONFIG.hero.heroPhoto
+      ? `<img src="${CONFIG.hero.heroPhoto}" style="width:100%;height:100%;object-fit:cover;">`
+      : `Sin foto`;
+  }
+  renderHeroPreview();
+
+  document.getElementById("hero-photo-input").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const msg = document.getElementById("hero-photo-msg");
+    msg.textContent = "Procesando...";
+    try{
+      const dataUrl = await fileToCompressedDataURL(file, 1400, 0.82);
+      CONFIG.hero.heroPhoto = dataUrl;
+      await storeSet("site-config", CONFIG, true);
+      renderHeroPreview();
+      msg.textContent = "Guardada ✓";
+    }catch(err){
+      msg.textContent = "No se pudo procesar la foto.";
+    }
+    setTimeout(()=> msg.textContent = "", 2500);
+  });
+
+  document.getElementById("hero-photo-remove").onclick = async () => {
+    CONFIG.hero.heroPhoto = "";
+    await storeSet("site-config", CONFIG, true);
+    renderHeroPreview();
+  };
+
+  // ---- galería ----
+  const galToggle = document.getElementById("gallery-enabled-toggle");
+  galToggle.checked = !!CONFIG.gallery.enabled;
+  galToggle.addEventListener("change", async () => {
+    CONFIG.gallery.enabled = galToggle.checked;
+    await storeSet("site-config", CONFIG, true);
+  });
+
+  function renderGalleryGrid(){
+    const grid = document.getElementById("gallery-photo-grid");
+    const photos = CONFIG.gallery.photoUrls || [];
+    if(!photos.length){
+      grid.innerHTML = `<span class="small-note">Aún no has subido fotos.</span>`;
+      return;
+    }
+    grid.innerHTML = photos.map((src, i) => `
+      <div style="position:relative;">
+        <img src="${src}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:4px;">
+        <button data-idx="${i}" class="remove-gallery-photo" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:1;">×</button>
+      </div>`).join("");
+    grid.querySelectorAll(".remove-gallery-photo").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const idx = parseInt(btn.dataset.idx);
+        CONFIG.gallery.photoUrls.splice(idx, 1);
+        await storeSet("site-config", CONFIG, true);
+        renderGalleryGrid();
+      });
+    });
+  }
+  renderGalleryGrid();
+
+  document.getElementById("gallery-photo-input").addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files);
+    if(!files.length) return;
+    const msg = document.getElementById("gallery-photo-msg");
+    msg.textContent = `Procesando ${files.length} foto(s)...`;
+    if(!CONFIG.gallery.photoUrls) CONFIG.gallery.photoUrls = [];
+    for(const file of files){
+      try{
+        const dataUrl = await fileToCompressedDataURL(file, 1000, 0.78);
+        CONFIG.gallery.photoUrls.push(dataUrl);
+      }catch(err){ /* ignora archivos que fallen */ }
+    }
+    await storeSet("site-config", CONFIG, true);
+    renderGalleryGrid();
+    msg.textContent = "Guardadas ✓";
+    setTimeout(()=> msg.textContent = "", 2500);
+  });
+}
+
+async function createGuest(){
+  const name = document.getElementById("new-guest-name").value.trim();
+  const passes = parseInt(document.getElementById("new-guest-passes").value) || 1;
+  if(!name){ alert("Escribe un nombre"); return; }
+  const id = uid();
+  const guest = { id, name, passes, createdAt: new Date().toISOString() };
+  await storeSet("guests:" + id, guest, true);
+  const url = `${adminBaseUrl()}?id=${id}`;
+  document.getElementById("new-link-result").innerHTML = `
+    <div class="admin-link-box">
+      <span>${esc(url)}</span>
+      <button class="admin-btn" onclick="navigator.clipboard.writeText('${url}')">Copiar</button>
+    </div>`;
+  document.getElementById("new-guest-name").value = "";
+  await loadGuestsTable();
+}
+
+async function loadGuestsTable(){
+  const container = document.getElementById("guests-table");
+  const keys = await storeList("guests:", true);
+  if(!keys.length){
+    container.innerHTML = `<p class="empty-state">Aún no has generado invitaciones. Usa el formulario de arriba.</p>`;
+    return;
+  }
+  let rows = "";
+  for(const k of keys){
+    const g = await storeGet(k, true);
+    if(!g) continue;
+    const rsvp = g.id ? await storeGet("rsvps:" + g.id, true) : null;
+    let status = `<span class="status-pill status-pending">Pendiente</span>`;
+    if(rsvp){
+      status = parseInt(rsvp.attending) > 0
+        ? `<span class="status-pill status-yes">Asiste (${rsvp.attending})</span>`
+        : `<span class="status-pill status-no">No asiste</span>`;
+    }
+    const url = `${adminBaseUrl()}?id=${g.id}`;
+    rows += `<tr>
+      <td>${esc(g.name)}</td>
+      <td>${g.passes}</td>
+      <td>${status}</td>
+      <td>${rsvp ? esc(rsvp.names||"") : "-"}</td>
+      <td>${rsvp ? esc(rsvp.phone||"") : "-"}</td>
+      <td><button class="admin-btn" style="padding:6px 12px;font-size:12px;" onclick="navigator.clipboard.writeText('${url}')">Copiar link</button></td>
+    </tr>`;
+  }
+  container.innerHTML = `
+    <table class="admin-table">
+      <thead><tr><th>Invitado</th><th>Pases</th><th>Estado</th><th>Asistentes</th><th>Teléfono</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function exportExcel(){
+  const keys = await storeList("guests:", true);
+  const data = [];
+  for(const k of keys){
+    const g = await storeGet(k, true);
+    if(!g) continue;
+    const rsvp = g.id ? await storeGet("rsvps:" + g.id, true) : null;
+    data.push({
+      "Invitado": g.name,
+      "Pases asignados": g.passes,
+      "Confirmó": rsvp ? (parseInt(rsvp.attending) > 0 ? "Sí" : "No") : "Sin responder",
+      "Personas que asisten": rsvp ? rsvp.attending : "",
+      "Nombre de asistentes": rsvp ? rsvp.names : "",
+      "Teléfono": rsvp ? rsvp.phone : "",
+      "Mensaje": rsvp ? rsvp.message : "",
+      "Fecha de respuesta": rsvp ? rsvp.respondedAt : "",
+      "Link de invitación": `${adminBaseUrl()}?id=${g.id}`
+    });
+  }
+  if(!data.length){ alert("No hay invitados registrados todavía."); return; }
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Invitados");
+  XLSX.writeFile(wb, `Invitados_${CONFIG.couple.groom}_${CONFIG.couple.bride}.xlsx`);
+}
+</script>
+</body>
+</html>
