@@ -1,4 +1,4 @@
-# Invitación de Boda — Walter & Nancy
+# Invitación de Boda — Walter & Thatiana
 
 Invitación digital interactiva con:
 - Sobre animado con sello de lacre y monograma
@@ -13,14 +13,16 @@ Invitación digital interactiva con:
 Una vez activado GitHub Pages en este repositorio (Settings → Pages → Branch: main), la invitación estará disponible en:
 
 ```
-https://digito01.github.io/invitacion-boda-walter-nancy/
+https://digito01.github.io/invitacion-boda-walter-thatiana/
 ```
 
 Panel de administración:
 
 ```
-https://digito01.github.io/invitacion-boda-walter-nancy/?admin=1
+https://digito01.github.io/invitacion-boda-walter-thatiana/?admin=1
 ```
+
+(Estos enlaces solo funcionan después de renombrar el repositorio a `invitacion-boda-walter-thatiana` desde GitHub → Settings → Repository name.)
 
 ## Editar contenido
 
