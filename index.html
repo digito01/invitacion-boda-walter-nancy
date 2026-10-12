@@ -860,6 +860,14 @@ function adminBaseUrl(){
   return window.location.origin + window.location.pathname;
 }
 
+// Mantiene el cuadro de texto del "Editor avanzado" sincronizado con CONFIG en
+// todo momento, para que copiar el JSON siempre traiga los cambios más recientes
+// (incluyendo fotos subidas), aunque no se haya recargado la página.
+function syncJsonEditor(){
+  const el = document.getElementById("json-editor");
+  if(el) el.value = JSON.stringify(CONFIG, null, 2);
+}
+
 // Convierte una foto subida por el usuario en un dataURL comprimido (sin necesitar un link externo)
 function fileToCompressedDataURL(file, maxDim=1400, quality=0.82){
   return new Promise((resolve, reject) => {
@@ -1005,7 +1013,7 @@ async function initAdmin(){
   const d = new Date(CONFIG.weddingDate);
   const pad = n => String(n).padStart(2,"0");
   document.getElementById("qe-date").value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  document.getElementById("json-editor").value = JSON.stringify(CONFIG, null, 2);
+  syncJsonEditor();
 
   document.getElementById("save-quick-btn").onclick = async () => {
     CONFIG.couple.groom = document.getElementById("qe-groom").value;
@@ -1015,7 +1023,7 @@ async function initAdmin(){
     const dtVal = document.getElementById("qe-date").value;
     if(dtVal) CONFIG.weddingDate = dtVal + ":00";
     await storeSet("site-config", CONFIG, true);
-    document.getElementById("json-editor").value = JSON.stringify(CONFIG, null, 2);
+    syncJsonEditor();
     document.getElementById("quick-save-msg").textContent = "Guardado ✓";
     setTimeout(() => document.getElementById("quick-save-msg").textContent = "", 2500);
   };
@@ -1066,6 +1074,7 @@ function setupPhotoControls(){
       CONFIG.hero.heroPhoto = dataUrl;
       await storeSet("site-config", CONFIG, true);
       renderHeroPreview();
+      syncJsonEditor();
       msg.textContent = "Guardada ✓";
     }catch(err){
       msg.textContent = "No se pudo procesar la foto.";
@@ -1077,6 +1086,7 @@ function setupPhotoControls(){
     CONFIG.hero.heroPhoto = "";
     await storeSet("site-config", CONFIG, true);
     renderHeroPreview();
+    syncJsonEditor();
   };
 
   // ---- galería ----
@@ -1085,6 +1095,7 @@ function setupPhotoControls(){
   galToggle.addEventListener("change", async () => {
     CONFIG.gallery.enabled = galToggle.checked;
     await storeSet("site-config", CONFIG, true);
+    syncJsonEditor();
   });
 
   function renderGalleryGrid(){
@@ -1105,6 +1116,7 @@ function setupPhotoControls(){
         CONFIG.gallery.photoUrls.splice(idx, 1);
         await storeSet("site-config", CONFIG, true);
         renderGalleryGrid();
+        syncJsonEditor();
       });
     });
   }
@@ -1124,6 +1136,7 @@ function setupPhotoControls(){
     }
     await storeSet("site-config", CONFIG, true);
     renderGalleryGrid();
+    syncJsonEditor();
     msg.textContent = "Guardadas ✓";
     setTimeout(()=> msg.textContent = "", 2500);
   });
