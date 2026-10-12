@@ -414,7 +414,7 @@ let CONFIG = {
   "dressCode": {
     "enabled": true,
     "title": "Código de Vestimenta",
-    "style": "Formal / Elegante",
+    "style": "Formal",
     "note": "Sugerimos evitar el color blanco y el azul marino, reservados para la novia y el cortejo.",
     "palette": [
       "#2e3d63",
@@ -535,6 +535,16 @@ async function storeList(prefix, shared=true){
       return Object.keys(localStorage).filter(k => k.startsWith(prefix));
     }
   }catch(e){ return []; }
+}
+async function storeDelete(key, shared=true){
+  try{
+    if(hasCloudStorage() && window.storage.delete){
+      await window.storage.delete(key, shared);
+    } else {
+      localStorage.removeItem(key);
+    }
+    return true;
+  }catch(e){ console.error("storage delete error", e); return false; }
 }
 
 // ---------- utilidades ----------
@@ -1162,6 +1172,13 @@ async function createGuest(){
   await loadGuestsTable();
 }
 
+async function deleteGuest(id, name){
+  if(!confirm(`¿Eliminar la invitación de "${name}"? El enlace dejará de funcionar y se borrará su respuesta de RSVP si la había. Esta acción no se puede deshacer.`)) return;
+  await storeDelete("guests:" + id, true);
+  await storeDelete("rsvps:" + id, true);
+  await loadGuestsTable();
+}
+
 async function loadGuestsTable(){
   const container = document.getElementById("guests-table");
   const keys = await storeList("guests:", true);
@@ -1187,7 +1204,10 @@ async function loadGuestsTable(){
       <td>${status}</td>
       <td>${rsvp ? esc(rsvp.names||"") : "-"}</td>
       <td>${rsvp ? esc(rsvp.phone||"") : "-"}</td>
-      <td><button class="admin-btn" style="padding:6px 12px;font-size:12px;" onclick="navigator.clipboard.writeText('${url}')">Copiar link</button></td>
+      <td style="white-space:nowrap;">
+        <button class="admin-btn" style="padding:6px 12px;font-size:12px;" onclick="navigator.clipboard.writeText('${url}')">Copiar link</button>
+        <button class="admin-btn" style="padding:6px 12px;font-size:12px;background:#b23c3c;margin-left:6px;" onclick="deleteGuest('${g.id}', '${esc(g.name).replace(/'/g, "\\'")}')">Eliminar</button>
+      </td>
     </tr>`;
   }
   container.innerHTML = `
