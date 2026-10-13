@@ -342,6 +342,21 @@
   .small-note{font-size:12.5px;color:var(--ink-soft);margin-top:6px;}
   .empty-state{color:var(--ink-soft);font-size:14px;padding:18px 0;text-align:center;}
 
+  .admin-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+  .admin-stat{flex:1;min-width:92px;background:var(--cream);border:1px solid var(--line);border-radius:6px;padding:10px 12px;text-align:center;}
+  .admin-stat strong{display:block;font-family:var(--font-display);font-size:22px;color:var(--navy);line-height:1.2;}
+  .admin-stat span{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.4px;}
+  .admin-stat.yes strong{color:#2c7a43;}
+  .admin-stat.no strong{color:#b23c3c;}
+  .admin-stat.pending strong{color:#8a7a4a;}
+  .admin-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .admin-toolbar input[type="text"]{flex:2;min-width:200px;padding:10px;border:1px solid var(--line);border-radius:4px;font-size:14px;}
+  .admin-toolbar select{flex:1;min-width:140px;padding:10px;border:1px solid var(--line);border-radius:4px;font-size:14px;background:#fff;}
+  .admin-table-wrap{overflow-x:auto;}
+  .admin-pager{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:16px;}
+  .admin-pager-info{font-size:13px;color:var(--ink-soft);}
+  .admin-pager button:disabled{opacity:.4;}
+
   @media (max-width:380px){
     .parents-grid{gap:20px;}
     .countdown{gap:10px;}
@@ -1214,24 +1229,80 @@ async function deleteGuest(id, name){
   await loadGuestsTable();
 }
 
+// ---------- tabla de invitados: caché local + buscador + filtro + paginación ----------
+let guestsCache = [];
+let guestsPage = 1;
+let guestsSearch = "";
+let guestsStatusFilter = "all";
+const GUESTS_PAGE_SIZE = 10;
+
 async function loadGuestsTable(){
   const container = document.getElementById("guests-table");
+  container.innerHTML = `<p class="empty-state">Cargando…</p>`;
   const keys = await storeList("guests:", true);
-  if(!keys.length){
-    container.innerHTML = `<p class="empty-state">Aún no has generado invitaciones. Usa el formulario de arriba.</p>`;
-    return;
-  }
-  let rows = "";
+  const items = [];
   for(const k of keys){
     const g = await storeGet(k, true);
     if(!g) continue;
     const rsvp = g.id ? await storeGet("rsvps:" + g.id, true) : null;
-    let status = `<span class="status-pill status-pending">Pendiente</span>`;
-    if(rsvp){
-      status = parseInt(rsvp.attending) > 0
-        ? `<span class="status-pill status-yes">Asiste (${rsvp.attending})</span>`
-        : `<span class="status-pill status-no">No asiste</span>`;
+    const statusKey = rsvp ? (parseInt(rsvp.attending) > 0 ? "yes" : "no") : "pending";
+    items.push({ g, rsvp, statusKey });
+  }
+  items.sort((a,b) => (b.g.createdAt||"").localeCompare(a.g.createdAt||""));
+  guestsCache = items;
+  guestsPage = 1;
+  renderGuestsTable();
+}
+
+function filterGuestsSearch(value){
+  guestsSearch = value;
+  guestsPage = 1;
+  renderGuestsTable({ keepFocus: "guests-search" });
+}
+function filterGuestsStatus(value){
+  guestsStatusFilter = value;
+  guestsPage = 1;
+  renderGuestsTable();
+}
+function goToGuestsPage(n){
+  guestsPage = n;
+  renderGuestsTable();
+  document.getElementById("guests-table").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function renderGuestsTable(opts){
+  const container = document.getElementById("guests-table");
+  if(!guestsCache.length){
+    container.innerHTML = `<p class="empty-state">Aún no has generado invitaciones. Usa el formulario de arriba.</p>`;
+    return;
+  }
+
+  const totalGuests = guestsCache.length;
+  const confirmedCount = guestsCache.filter(x => x.statusKey === "yes").length;
+  const declinedCount = guestsCache.filter(x => x.statusKey === "no").length;
+  const pendingCount = guestsCache.filter(x => x.statusKey === "pending").length;
+  const totalPassesConfirmed = guestsCache.reduce((sum,x) => sum + (x.statusKey === "yes" ? parseInt(x.rsvp.attending) : 0), 0);
+
+  const q = guestsSearch.trim().toLowerCase();
+  const filtered = guestsCache.filter(({g, rsvp, statusKey}) => {
+    if(guestsStatusFilter !== "all" && statusKey !== guestsStatusFilter) return false;
+    if(q){
+      const haystack = `${g.name} ${rsvp?rsvp.names||"":""} ${rsvp?rsvp.phone||"":""}`.toLowerCase();
+      if(!haystack.includes(q)) return false;
     }
+    return true;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / GUESTS_PAGE_SIZE));
+  if(guestsPage > totalPages) guestsPage = totalPages;
+  const startIdx = (guestsPage - 1) * GUESTS_PAGE_SIZE;
+  const pageItems = filtered.slice(startIdx, startIdx + GUESTS_PAGE_SIZE);
+
+  let rows = "";
+  for(const {g, rsvp, statusKey} of pageItems){
+    let status = `<span class="status-pill status-pending">Pendiente</span>`;
+    if(statusKey === "yes") status = `<span class="status-pill status-yes">Asiste (${rsvp.attending})</span>`;
+    if(statusKey === "no") status = `<span class="status-pill status-no">No asiste</span>`;
     const url = `${adminBaseUrl()}?id=${g.id}`;
     rows += `<tr>
       <td>${esc(g.name)}</td>
@@ -1245,11 +1316,49 @@ async function loadGuestsTable(){
       </td>
     </tr>`;
   }
+  if(!rows){
+    rows = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">No se encontraron invitados con ese filtro o búsqueda.</td></tr>`;
+  }
+
+  let pager = "";
+  if(totalPages > 1){
+    pager = `<div class="admin-pager">
+      <button class="admin-btn secondary" style="padding:6px 14px;font-size:12px;" ${guestsPage<=1?"disabled":""} onclick="goToGuestsPage(${guestsPage-1})">‹ Anterior</button>
+      <span class="admin-pager-info">Página ${guestsPage} de ${totalPages} · ${filtered.length} resultado${filtered.length===1?"":"s"}</span>
+      <button class="admin-btn secondary" style="padding:6px 14px;font-size:12px;" ${guestsPage>=totalPages?"disabled":""} onclick="goToGuestsPage(${guestsPage+1})">Siguiente ›</button>
+    </div>`;
+  }
+
   container.innerHTML = `
-    <table class="admin-table">
-      <thead><tr><th>Invitado</th><th>Pases</th><th>Estado</th><th>Asistentes</th><th>Teléfono</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div class="admin-stats">
+      <div class="admin-stat"><strong>${totalGuests}</strong><span>Invitaciones</span></div>
+      <div class="admin-stat yes"><strong>${confirmedCount}</strong><span>Confirmados</span></div>
+      <div class="admin-stat no"><strong>${declinedCount}</strong><span>No asisten</span></div>
+      <div class="admin-stat pending"><strong>${pendingCount}</strong><span>Pendientes</span></div>
+      <div class="admin-stat"><strong>${totalPassesConfirmed}</strong><span>Personas confirmadas</span></div>
+    </div>
+    <div class="admin-toolbar">
+      <input type="text" id="guests-search" placeholder="Buscar por nombre o teléfono…" value="${esc(guestsSearch)}" oninput="filterGuestsSearch(this.value)">
+      <select id="guests-filter" onchange="filterGuestsStatus(this.value)">
+        <option value="all" ${guestsStatusFilter==="all"?"selected":""}>Todos los estados</option>
+        <option value="yes" ${guestsStatusFilter==="yes"?"selected":""}>Confirmados</option>
+        <option value="no" ${guestsStatusFilter==="no"?"selected":""}>No asisten</option>
+        <option value="pending" ${guestsStatusFilter==="pending"?"selected":""}>Pendientes</option>
+      </select>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Invitado</th><th>Pases</th><th>Estado</th><th>Asistentes</th><th>Teléfono</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${pager}
+  `;
+
+  if(opts && opts.keepFocus){
+    const el = document.getElementById(opts.keepFocus);
+    if(el){ el.focus(); const v = el.value; el.value=""; el.value=v; }
+  }
 }
 
 async function exportExcel(){
