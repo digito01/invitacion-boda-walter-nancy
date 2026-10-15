@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://digito01.github.io/invitacion-boda-walter-thatiana/og-image.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -55,8 +55,8 @@
     --blush:#d9cfb4;
     --paper:#ede6d3;
     --gold:#ad8a5c;
-    --ink:#332f29;
-    --ink-soft:#6b6459;
+    --ink:#2b2722;
+    --ink-soft:#4d463c;
     --line:rgba(104,12,23,0.18);
     --font-display:'Playfair Display', serif;
     --font-body:'EB Garamond', serif;
@@ -319,6 +319,13 @@
   }
   .submit-btn:hover{background:var(--navy-soft);}
   .submit-btn:active{background:var(--navy-soft);}
+  .cal-wrap{margin-top:16px;text-align:center;}
+  .cal-btn{background:none;border:1px solid var(--navy);color:var(--navy);padding:10px 22px;border-radius:2px;font-family:var(--font-label);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-size:13px;cursor:pointer;min-height:44px;}
+  .cal-menu{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
+  .cal-menu a{border:1px solid var(--gold);color:var(--navy);padding:9px 16px;border-radius:20px;font-family:var(--font-label);font-weight:700;font-size:14px;text-decoration:none;cursor:pointer;min-height:40px;display:inline-flex;align-items:center;}
+  .rsvp-summary{font-family:var(--font-label);font-weight:700;font-size:15px;color:var(--navy);margin:0 0 16px;line-height:1.5;}
+  .rsvp-edit-btn{background:none;border:1px solid var(--navy);color:var(--navy);padding:10px 22px;border-radius:2px;font-family:var(--font-label);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-size:13px;cursor:pointer;min-height:44px;}
+  .rsvp-error{color:#b23c3c;font-size:14px;text-align:center;margin:0 0 12px;}
   .rsvp-success{text-align:center;padding:24px 6px;}
   .rsvp-success .check{width:46px;height:46px;margin:0 auto 14px;color:var(--gold);}
 
@@ -369,6 +376,19 @@
   .admin-pager{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:16px;}
   .admin-pager-info{font-size:13px;color:var(--ink-soft);}
   .admin-pager button:disabled{opacity:.4;}
+
+
+  /* ---- Texto más grueso y legible ---- */
+  body{font-weight:500;}
+  .body-text{font-weight:500;}
+  .parents-col p, .venue-address{font-weight:500;}
+  .eyebrow, .hero-eyebrow, .cd-label, .tl-label, .field label, .parents-col .role,
+  .wedding-date, .guest-line, .map-btn, .rsvp-pass-line, #footer .hashtag,
+  .info-chip, .submit-btn{font-weight:700;}
+  .cd-num, .venue-time, .tl-time{font-weight:600;}
+  .hero-eyebrow{color:rgba(255,255,255,0.85);}
+  .guest-line{color:rgba(255,255,255,0.92);}
+  #footer{color:rgba(255,255,255,0.8);}
 
   @media (max-width:380px){
     .parents-grid{gap:20px;}
@@ -502,12 +522,15 @@ let CONFIG = {
     "enabled": true,
     "title": "Confirma tu Asistencia",
     "deadline": "23 de noviembre, 2026",
-    "thankYouMessage": "¡Gracias por confirmar! Estamos felices de celebrar contigo."
+    "deadlineDate": "2026-11-23",
+    "thankYouMessage": "¡Gracias por confirmar! Estamos felices de celebrar contigo.",
+    "declineMessage": "Lamentamos que no puedas acompañarnos, pero te agradecemos mucho que nos avises. Te llevaremos en el corazón ese día."
   },
   "footer": {
     "hashtag": "#WalterYThatiana2026"
   }
 };
+const CONFIG_DEFAULTS = JSON.parse(JSON.stringify(CONFIG));
 
 // Íconos SVG (dibujo original, sin marcas registradas)
 const ICONS = {
@@ -651,6 +674,7 @@ function heroSection(guest){
       <p class="body-text">${esc(h.welcomeMessage)}</p>
       <div class="countdown" id="countdown"></div>
       <div class="wedding-date" id="wedding-date-label"></div>
+      <div class="cal-wrap"><button type="button" class="cal-btn" id="cal-toggle">＋ Agregar al calendario</button><div class="cal-menu" id="cal-menu" style="display:none;"><a id="cal-google" target="_blank" rel="noopener">Google Calendar</a><a id="cal-ics" href="#">Apple / Outlook (.ics)</a></div></div>
     </div>
   </section>`;
 }
@@ -757,28 +781,29 @@ function gallerySection(){
   </section>`;
 }
 
-function rsvpSection(guest){
-  const r = CONFIG.rsvp;
-  if(!r.enabled) return "";
+function rsvpIsClosed(){
+  const d = CONFIG.rsvp.deadlineDate;
+  if(!d) return false;
+  return Date.now() > new Date(d + "T23:59:59").getTime();
+}
+
+function rsvpFormHtml(guest){
   const maxPasses = guest.passes || 1;
-  let passOptions = `<option value="0">No podremos asistir</option>`;
+  let passOptions = `<option value="">Selecciona una opción</option>`;
   for(let i=1;i<=maxPasses;i++){
-    passOptions += `<option value="${i}">${i} ${i==1?'persona':'personas'}</option>`;
+    passOptions += `<option value="${i}">Sí, asistiré${maxPasses>1?` con ${i} ${i==1?'persona':'personas'}`:''}</option>`;
   }
+  passOptions += `<option value="0">No podremos asistir</option>`;
   return `
-  <section class="section" id="rsvp">
-    <p class="eyebrow">Antes del ${esc(r.deadline)}</p>
-    <h2 class="display-title">${esc(r.title)}</h2>
-    <div class="rsvp-card" id="rsvp-card">
       <div class="rsvp-pass-line">Tienes <b>${maxPasses}</b> ${maxPasses==1?'pase':'pases'} reservados a tu nombre</div>
       <form id="rsvp-form">
         <div class="field">
           <label>¿Nos acompañarás?</label>
-          <select id="f-attend">${passOptions}</select>
+          <select id="f-attend" required>${passOptions}</select>
         </div>
-        <div class="field">
+        <div class="field" id="f-names-wrap">
           <label>Nombre de los asistentes</label>
-          <input type="text" id="f-names" placeholder="${esc(guest.name)}" required>
+          <input type="text" id="f-names" placeholder="${esc(guest.name)}">
         </div>
         <div class="field">
           <label>Teléfono</label>
@@ -788,10 +813,106 @@ function rsvpSection(guest){
           <label>Mensaje para los novios</label>
           <textarea id="f-message" placeholder="Escribe unas palabras..."></textarea>
         </div>
-        <button type="submit" class="submit-btn">Enviar confirmación</button>
-      </form>
-    </div>
+        <p class="rsvp-error" id="rsvp-error" style="display:none;"></p>
+        <button type="submit" class="submit-btn" id="rsvp-submit">Enviar confirmación</button>
+      </form>`;
+}
+
+function rsvpResultHtml(data, canEdit){
+  const going = parseInt(data.attending) > 0;
+  const msg = going ? CONFIG.rsvp.thankYouMessage : CONFIG.rsvp.declineMessage;
+  const summary = going
+    ? `<p class="rsvp-summary">${data.attending} ${parseInt(data.attending)==1?'persona confirmada':'personas confirmadas'}${data.names?`<br>${esc(data.names)}`:''}</p>`
+    : "";
+  const edit = canEdit
+    ? `<button type="button" class="rsvp-edit-btn" id="rsvp-edit">Modificar mi respuesta</button>`
+    : `<p class="small-note" style="text-align:center;">El plazo para modificar tu respuesta ha terminado.</p>`;
+  return `
+    <div class="rsvp-success">
+      <div class="check">${going ? ICONS.check : ICONS.seal}</div>
+      <p class="body-text" style="margin:0 0 10px;">${esc(msg)}</p>
+      ${summary}
+      ${edit}
+    </div>`;
+}
+
+function rsvpSection(guest){
+  const r = CONFIG.rsvp;
+  if(!r.enabled) return "";
+  const closed = rsvpIsClosed();
+  return `
+  <section class="section" id="rsvp">
+    <p class="eyebrow">${closed ? "Confirmación de asistencia" : "Antes del " + esc(r.deadline)}</p>
+    <h2 class="display-title">${esc(r.title)}</h2>
+    <div class="rsvp-card" id="rsvp-card"><p class="small-note" style="text-align:center;">Cargando…</p></div>
   </section>`;
+}
+
+async function initRsvp(guest){
+  const card = document.getElementById("rsvp-card");
+  if(!card) return;
+  const closed = rsvpIsClosed();
+  const key = "rsvps:" + (guest.id || "");
+  let prev = guest.id ? await storeGet(key, true) : null;
+
+  function showForm(prefill){
+    card.innerHTML = rsvpFormHtml(guest);
+    const attend = document.getElementById("f-attend");
+    const namesWrap = document.getElementById("f-names-wrap");
+    const names = document.getElementById("f-names");
+    function sync(){
+      const no = attend.value === "0";
+      namesWrap.style.display = no ? "none" : "";
+      names.required = !no && attend.value !== "";
+    }
+    attend.addEventListener("change", sync);
+    if(prefill){
+      attend.value = prefill.attending;
+      names.value = prefill.names || "";
+      document.getElementById("f-phone").value = prefill.phone || "";
+      document.getElementById("f-message").value = prefill.message || "";
+    }
+    sync();
+    document.getElementById("rsvp-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("rsvp-submit");
+      const err = document.getElementById("rsvp-error");
+      err.style.display = "none";
+      btn.disabled = true; btn.textContent = "Enviando…";
+      const data = {
+        guestId: guest.id,
+        guestName: guest.name,
+        attending: attend.value,
+        names: attend.value === "0" ? "" : names.value,
+        phone: document.getElementById("f-phone").value,
+        message: document.getElementById("f-message").value,
+        respondedAt: new Date().toISOString()
+      };
+      const ok = await storeSet("rsvps:" + (guest.id || uid()), data, true);
+      if(!ok){
+        err.textContent = "No pudimos guardar tu respuesta. Revisa tu conexión e inténtalo de nuevo.";
+        err.style.display = "block";
+        btn.disabled = false; btn.textContent = "Enviar confirmación";
+        return;
+      }
+      prev = guest.id ? data : null;
+      showResult(data, guest.id ? !rsvpIsClosed() : false);
+    });
+  }
+
+  function showResult(data, canEdit){
+    card.innerHTML = rsvpResultHtml(data, canEdit);
+    const eb = document.getElementById("rsvp-edit");
+    if(eb) eb.addEventListener("click", () => showForm(data));
+  }
+
+  if(prev){
+    showResult(prev, !closed);
+  } else if(closed){
+    card.innerHTML = `<div class="rsvp-success"><p class="body-text" style="margin:0;">El plazo para confirmar asistencia ha terminado. Si aún necesitas avisar a los novios, comunícate con ellos directamente.</p></div>`;
+  } else {
+    showForm(null);
+  }
 }
 
 function footerSection(){
@@ -820,39 +941,58 @@ async function renderInvitation(guest){
   ].join("");
 
   startCountdown();
+  setupCalendar();
 
-  const form = document.getElementById("rsvp-form");
-  if(form){
-    // pre-fill si ya había respondido antes (mismo id de invitado)
-    if(guest.id){
-      const prev = await storeGet("rsvps:" + guest.id, true);
-      if(prev){
-        document.getElementById("f-attend").value = prev.attending;
-        document.getElementById("f-names").value = prev.names || "";
-        document.getElementById("f-phone").value = prev.phone || "";
-        document.getElementById("f-message").value = prev.message || "";
-      }
-    }
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const data = {
-        guestId: guest.id,
-        guestName: guest.name,
-        attending: document.getElementById("f-attend").value,
-        names: document.getElementById("f-names").value,
-        phone: document.getElementById("f-phone").value,
-        message: document.getElementById("f-message").value,
-        respondedAt: new Date().toISOString()
-      };
-      const key = "rsvps:" + (guest.id || uid());
-      await storeSet(key, data, true);
-      document.getElementById("rsvp-card").innerHTML = `
-        <div class="rsvp-success">
-          <div class="check">${ICONS.check}</div>
-          <p class="body-text" style="margin:0;">${esc(CONFIG.rsvp.thankYouMessage)}</p>
-        </div>`;
-    });
-  }
+  await initRsvp(guest);
+}
+
+// ---------- agregar al calendario ----------
+function calendarEvent(){
+  // La hora de CONFIG.weddingDate se interpreta en horario de Honduras (UTC-6, sin horario de verano)
+  const start = new Date(CONFIG.weddingDate + "-06:00");
+  const end = new Date(start.getTime() + 6*3600*1000);
+  const fmt = d => d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+  const c = CONFIG.ceremony, r = CONFIG.reception;
+  const title = `Boda de ${CONFIG.couple.groom} y ${CONFIG.couple.bride}`;
+  const place = [c.venueName, (c.address||"").trim()].filter(Boolean).join(", ");
+  const details = `Ceremonia: ${c.time} · ${c.venueName}\nRecepción: ${r.time} · ${r.venueName}${r.address?` (${r.address.trim()})`:""}`;
+  return { title, place, details, start: fmt(start), end: fmt(end) };
+}
+function setupCalendar(){
+  const toggle = document.getElementById("cal-toggle");
+  if(!toggle) return;
+  const ev = calendarEvent();
+  document.getElementById("cal-google").href =
+    "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+    "&text=" + encodeURIComponent(ev.title) +
+    "&dates=" + ev.start + "/" + ev.end +
+    "&details=" + encodeURIComponent(ev.details) +
+    "&location=" + encodeURIComponent(ev.place);
+  toggle.addEventListener("click", () => {
+    const m = document.getElementById("cal-menu");
+    m.style.display = m.style.display === "none" ? "flex" : "none";
+  });
+  document.getElementById("cal-ics").addEventListener("click", (e) => {
+    e.preventDefault();
+    const esc2 = t => t.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
+    const ics = [
+      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Invitacion Boda//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      "UID:boda-" + ev.start + "@invitacion",
+      "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,""),
+      "DTSTART:" + ev.start, "DTEND:" + ev.end,
+      "SUMMARY:" + esc2(ev.title),
+      "LOCATION:" + esc2(ev.place),
+      "DESCRIPTION:" + esc2(ev.details),
+      "BEGIN:VALARM","TRIGGER:-P1D","ACTION:DISPLAY","DESCRIPTION:Mañana es la boda","END:VALARM",
+      "END:VEVENT","END:VCALENDAR"
+    ].join("\r\n");
+    const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "boda.ics";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
 }
 
 function startCountdown(){
@@ -902,11 +1042,42 @@ function setupEnvelope(onOpen){
   });
 }
 
+// ---------- configuración: cargar (mezclando con valores por defecto) y guardar ----------
+// Las fotos se guardan en documentos aparte porque Firestore limita cada documento a 1 MiB.
+function deepMerge(base, over){
+  if(Array.isArray(over) || over === null || typeof over !== "object") return over === undefined ? base : over;
+  const out = (base && typeof base === "object" && !Array.isArray(base)) ? {...base} : {};
+  for(const k of Object.keys(over)) out[k] = deepMerge(out[k], over[k]);
+  return out;
+}
+async function loadConfig(){
+  const main = await storeGet("site-config", true);
+  if(!main) return;
+  const merged = deepMerge(CONFIG_DEFAULTS, main);
+  const hero = await storeGet("site-hero", true);
+  const gal = await storeGet("site-gallery", true);
+  if(hero && typeof hero.photo === "string") merged.hero.heroPhoto = hero.photo;
+  if(gal && Array.isArray(gal.photos)) merged.gallery.photoUrls = gal.photos;
+  CONFIG = merged;
+}
+async function saveConfig(){
+  const copy = JSON.parse(JSON.stringify(CONFIG));
+  const heroPhoto = (copy.hero && copy.hero.heroPhoto) || "";
+  const photos = (copy.gallery && copy.gallery.photoUrls) || [];
+  if(copy.hero) copy.hero.heroPhoto = "";
+  if(copy.gallery) copy.gallery.photoUrls = [];
+  const r1 = await storeSet("site-config", copy, true);
+  const r2 = await storeSet("site-hero", { photo: heroPhoto }, true);
+  const r3 = await storeSet("site-gallery", { photos }, true);
+  const ok = r1 && r2 && r3;
+  if(!ok) alert("No se pudo guardar en la nube. Si subiste muchas fotos, elimina algunas (el límite es de unas 7 fotos en la galería) e inténtalo de nuevo.");
+  return ok;
+}
+
 // ---------- arranque ----------
 async function boot(){
   // Carga el contenido guardado desde el panel admin (si existe) antes de todo lo demás.
-  const savedConfig = await storeGet("site-config", true);
-  if(savedConfig) CONFIG = savedConfig;
+  await loadConfig();
 
   // Modo admin: entra directo, sin sobre.
   if(qs("admin") === "1" || qs("admin") === "true"){
@@ -1015,6 +1186,7 @@ async function initAdmin(){
       </div>
       <div class="admin-row" style="margin-bottom:16px;">
         <div class="admin-field"><label>Fecha y hora de la boda</label><input id="qe-date" type="datetime-local"></div>
+        <div class="admin-field"><label>Fecha límite para confirmar asistencia</label><input id="qe-deadline" type="date"></div>
         <div class="admin-field" style="max-width:160px;"><label>Contraseña del panel</label><input id="qe-password" type="text"></div>
       </div>
       <div class="admin-row" style="margin-bottom:20px;">
@@ -1082,6 +1254,7 @@ async function initAdmin(){
   document.getElementById("qe-bride").value = CONFIG.couple.bride;
   document.getElementById("qe-monogram").value = CONFIG.couple.monogram;
   document.getElementById("qe-password").value = CONFIG.adminPassword;
+  document.getElementById("qe-deadline").value = CONFIG.rsvp.deadlineDate || "";
   const d = new Date(CONFIG.weddingDate);
   const pad = n => String(n).padStart(2,"0");
   document.getElementById("qe-date").value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -1094,9 +1267,15 @@ async function initAdmin(){
     CONFIG.adminPassword = document.getElementById("qe-password").value;
     const dtVal = document.getElementById("qe-date").value;
     if(dtVal) CONFIG.weddingDate = dtVal + ":00";
-    await storeSet("site-config", CONFIG, true);
+    const dl = document.getElementById("qe-deadline").value;
+    if(dl){
+      CONFIG.rsvp.deadlineDate = dl;
+      const [yy,mm,dd] = dl.split("-").map(Number);
+      CONFIG.rsvp.deadline = new Date(yy, mm-1, dd).toLocaleDateString("es-ES", {day:"numeric", month:"long", year:"numeric"});
+    }
+    const okSave = await saveConfig();
     syncJsonEditor();
-    document.getElementById("quick-save-msg").textContent = "Guardado ✓";
+    document.getElementById("quick-save-msg").textContent = okSave ? "Guardado ✓" : "No se pudo guardar";
     setTimeout(() => document.getElementById("quick-save-msg").textContent = "", 2500);
   };
 
@@ -1105,7 +1284,7 @@ async function initAdmin(){
     try{
       const parsed = JSON.parse(document.getElementById("json-editor").value);
       CONFIG = parsed;
-      await storeSet("site-config", CONFIG, true);
+      await saveConfig();
       msg.textContent = "Guardado ✓ (recarga la vista previa para verlo)";
       msg.style.color = "#2c7a43";
     }catch(e){
@@ -1144,7 +1323,7 @@ function setupPhotoControls(){
     try{
       const dataUrl = await fileToCompressedDataURL(file, 1400, 0.82);
       CONFIG.hero.heroPhoto = dataUrl;
-      await storeSet("site-config", CONFIG, true);
+      await saveConfig();
       renderHeroPreview();
       syncJsonEditor();
       msg.textContent = "Guardada ✓";
@@ -1156,7 +1335,7 @@ function setupPhotoControls(){
 
   document.getElementById("hero-photo-remove").onclick = async () => {
     CONFIG.hero.heroPhoto = "";
-    await storeSet("site-config", CONFIG, true);
+    await saveConfig();
     renderHeroPreview();
     syncJsonEditor();
   };
@@ -1166,7 +1345,7 @@ function setupPhotoControls(){
   galToggle.checked = !!CONFIG.gallery.enabled;
   galToggle.addEventListener("change", async () => {
     CONFIG.gallery.enabled = galToggle.checked;
-    await storeSet("site-config", CONFIG, true);
+    await saveConfig();
     syncJsonEditor();
   });
 
@@ -1186,7 +1365,7 @@ function setupPhotoControls(){
       btn.addEventListener("click", async () => {
         const idx = parseInt(btn.dataset.idx);
         CONFIG.gallery.photoUrls.splice(idx, 1);
-        await storeSet("site-config", CONFIG, true);
+        await saveConfig();
         renderGalleryGrid();
         syncJsonEditor();
       });
@@ -1206,7 +1385,7 @@ function setupPhotoControls(){
         CONFIG.gallery.photoUrls.push(dataUrl);
       }catch(err){ /* ignora archivos que fallen */ }
     }
-    await storeSet("site-config", CONFIG, true);
+    await saveConfig();
     renderGalleryGrid();
     syncJsonEditor();
     msg.textContent = "Guardadas ✓";
