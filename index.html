@@ -422,6 +422,7 @@
 ========================================================= -->
 <script>
 let CONFIG = {
+  "_rev": 2,
   "adminPassword": "boda2026",
   "couple": {
     "groom": "Walter",
@@ -486,26 +487,17 @@ let CONFIG = {
     "enabled": true,
     "title": "Código de Vestimenta",
     "style": "Formal",
-    "note": "Sugerimos evitar el color blanco y el vino/borgoña, reservados para los novios y el cortejo.",
-    "palette": [
-      "#680c17",
-      "#ad8a5c",
-      "#e3dbc6",
-      "#b98a8f"
-    ]
+    "note": "",
+    "palette": []
   },
   "giftTable": {
     "enabled": true,
-    "title": "Mesa de Regalos",
-    "message": "Tu presencia es nuestro mejor regalo. Si deseas tener un detalle con nosotros, aquí tienes algunas opciones:",
+    "title": "Regalos",
+    "message": "Tu presencia es nuestro mejor regalo. Si deseas tener un detalle con nosotros:",
     "options": [
       {
-        "label": "Tiendas Carrión",
-        "value": "Mesa de regalos: 12345678"
-      },
-      {
         "label": "Sobre / Efectivo",
-        "value": "También lo recibimos con mucho cariño"
+        "value": "Lo recibimos con mucho cariño"
       }
     ]
   },
@@ -740,14 +732,14 @@ function timelineSection(){
 function dressCodeSection(){
   const d = CONFIG.dressCode;
   if(!d.enabled) return "";
-  const dots = d.palette.map(c => `<span style="background:${esc(c)}"></span>`).join("");
+  const dots = (d.palette || []).map(c => `<span style="background:${esc(c)}"></span>`).join("");
   return `
   <section class="section" id="dresscode">
     <p class="eyebrow">Vestimenta</p>
     <h2 class="display-title">${esc(d.title)}</h2>
     <div class="info-chip">${esc(d.style)}</div>
-    <p class="body-text" style="margin-top:18px;">${esc(d.note)}</p>
-    <div class="palette-dots">${dots}</div>
+    ${d.note ? `<p class="body-text" style="margin-top:18px;">${esc(d.note)}</p>` : ""}
+    ${dots ? `<div class="palette-dots">${dots}</div>` : ""}
   </section>`;
 }
 
@@ -1057,6 +1049,12 @@ async function loadConfig(){
   const main = await storeGet("site-config", true);
   if(!main) return;
   const merged = deepMerge(CONFIG_DEFAULTS, main);
+  // Si el contenido guardado es de una revisión anterior, estas secciones se actualizan con lo definido en el código.
+  if((main._rev || 0) < CONFIG_DEFAULTS._rev){
+    merged.giftTable = JSON.parse(JSON.stringify(CONFIG_DEFAULTS.giftTable));
+    merged.dressCode = JSON.parse(JSON.stringify(CONFIG_DEFAULTS.dressCode));
+    merged._rev = CONFIG_DEFAULTS._rev;
+  }
   const hero = await storeGet("site-hero", true);
   const gal = await storeGet("site-gallery", true);
   if(hero && typeof hero.photo === "string") merged.hero.heroPhoto = hero.photo;
