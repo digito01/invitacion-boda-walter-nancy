@@ -144,7 +144,12 @@
   .admin-logo svg{width:40px;height:49px;color:var(--navy);}
   .admin-topbar .admin-title{display:flex;align-items:center;gap:12px;}
   .admin-topbar .admin-title svg{width:34px;height:42px;color:var(--navy);flex:none;}
-  .admin-topbar h1{margin:0;font-size:clamp(20px,5vw,28px);}
+  .admin-topbar h1{margin:0;font-size:clamp(20px,5vw,28px);line-height:1.2;}
+  @media (max-width:640px){
+    .admin-topbar .adm-t1, .admin-topbar .adm-t2{display:block;}
+    .admin-topbar .adm-dash{display:none;}
+    .admin-topbar .adm-t2{font-size:.8em;font-weight:500;color:var(--ink-soft);margin-top:2px;}
+  }
   .env-monogram{
     position:absolute;bottom:16%;left:50%;transform:translateX(-50%);
     font-family:var(--font-display);
@@ -335,7 +340,8 @@
   .rsvp-edit-btn{background:none;border:1px solid var(--navy);color:var(--navy);padding:10px 22px;border-radius:2px;font-family:var(--font-label);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-size:13px;cursor:pointer;min-height:44px;}
   .rsvp-error{color:#b23c3c;font-size:14px;text-align:center;margin:0 0 12px;}
   .rsvp-success{text-align:center;padding:24px 6px;}
-  .rsvp-success .check{width:46px;height:46px;margin:0 auto 14px;color:var(--gold);}
+  .rsvp-success .check{width:46px;height:56px;margin:0 auto 14px;color:var(--gold);}
+  .rsvp-success .check svg{width:100%;height:100%;display:block;}
 
   /* ---------- footer ---------- */
   #footer{padding:clamp(34px,8vw,40px) 30px calc(50px + env(safe-area-inset-bottom));color:rgba(255,255,255,0.55);background:var(--navy-deep);text-align:center;}
@@ -372,8 +378,8 @@
 
   .admin-btn-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;}
   .btn-open{background:var(--navy);color:#fff;}
-  .btn-copy{background:#b23c3c;color:#fff;}
-  .btn-del{background:var(--gold);color:#fff;}
+  .btn-copy{background:#96733f;color:#fff;}
+  .btn-del{background:#b23c3c;color:#fff;}
   .btn-sm{padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer;min-height:34px;}
   td.actions{white-space:nowrap;}
   td.actions .admin-btn{margin-left:6px;}
@@ -566,8 +572,6 @@ const ICONS = {
   guests: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="24" cy="16" r="6"/><circle cx="10" cy="20" r="5"/><circle cx="38" cy="20" r="5"/><path d="M6 40c0-7 6-11 18-11s18 4 18 11"/></svg>`,
   toast: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 8l4 16a4 4 0 004 3 4 4 0 004-3l4-16" transform="translate(-4)"/><path d="M32 8l4 16a4 4 0 004 3 4 4 0 004-3l4-16" transform="translate(-4)"/><path d="M18 27v13M30 27v13M14 44h30"/></svg>`,
   music: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 34V10l20-4v24"/><circle cx="14" cy="36" r="5"/><circle cx="34" cy="30" r="5"/></svg>`,
-  flower: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M24 8c3 5 3 8 0 11-3-3-3-6 0-11zM24 8c-3 5-8 6-11 4 1-4 5-6 11-4zM24 8c3 5 8 6 11 4-1-4-5-6-11-4z"/><path d="M13 18c3-2 8-2 11 1 3-3 8-3 11-1-1 5-6 9-11 9s-10-4-11-9z"/></svg>`,
-  check: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><circle cx="24" cy="24" r="20"/><path d="M15 24l6 6 12-13"/></svg>`
 };
 </script>
 
@@ -856,7 +860,7 @@ function rsvpResultHtml(data, canEdit){
     : `<p class="small-note" style="text-align:center;">El plazo para modificar tu respuesta ha terminado.</p>`;
   return `
     <div class="rsvp-success">
-      <div class="check">${going ? ICONS.check : ICONS.flower}</div>
+      <div class="check"><svg class="rose-icon"><use href="#rose"/></svg></div>
       <p class="body-text" style="margin:0 0 10px;">${esc(msg)}</p>
       ${summary}
       ${edit}
@@ -1210,7 +1214,7 @@ async function initAdmin(){
 
   root.innerHTML = `
     <div class="admin-topbar">
-      <div class="admin-title"><svg><use href="#rose"/></svg><h1>Panel de la Boda — ${esc(CONFIG.couple.groom)} &amp; ${esc(CONFIG.couple.bride)}</h1></div>
+      <div class="admin-title"><svg><use href="#rose"/></svg><h1><span class="adm-t1">Panel de la Boda</span><span class="adm-dash"> — </span><span class="adm-t2">${esc(CONFIG.couple.groom)} &amp; ${esc(CONFIG.couple.bride)}</span></h1></div>
       <div style="display:flex;gap:10px;">
         <a class="admin-btn secondary" style="text-decoration:none;display:inline-flex;align-items:center;" href="${adminBaseUrl()}?invitado=Vista+Previa&pases=2" target="_blank">Vista previa</a>
         <button class="admin-btn secondary" id="export-btn">Exportar a Excel</button>
