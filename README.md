@@ -19,7 +19,7 @@ https://digito01.github.io/invitacion-boda-walter-thatiana/
 Panel de administración:
 
 ```
-https://digito01.github.io/invitacion-boda-walter-thatiana/?admin=1
+https://digito01.github.io/invitacion-boda-walter-thatiana/admin.html
 ```
 
 (Estos enlaces solo funcionan después de renombrar el repositorio a `invitacion-boda-walter-thatiana` desde GitHub → Settings → Repository name.)
