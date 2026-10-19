@@ -222,8 +222,8 @@
   }
   .hero-inner{color:#fff;padding-bottom:26px;display:flex;flex-direction:column;align-items:center;padding-left:24px;padding-right:24px;}
   .hero-eyebrow{font-family:var(--font-label);letter-spacing:5px;text-transform:uppercase;font-size:clamp(12px,3.2vw,14px);color:rgba(255,255,255,0.65);margin:0 0 16px;}
-  .hero-names{font-family:var(--font-display);font-size:clamp(32px,10vw,42px);line-height:1.18;margin:0;font-weight:600;}
-  .hero-and{display:block;font-family:var(--font-script);font-size:clamp(24px,6.5vw,32px);color:var(--gold);margin:2px 0;}
+  .hero-names{font-family:var(--font-script);font-size:clamp(48px,15vw,62px);line-height:1.08;margin:0;font-weight:400;color:#fff;}
+  .hero-and{display:block;font-family:var(--font-script);font-size:clamp(26px,7vw,34px);color:var(--gold);margin:0;line-height:1.2;}
   .guest-line{
     margin-top:24px;font-family:var(--font-label);font-size:clamp(14px,3.6vw,16px);
     color:rgba(255,255,255,0.78);letter-spacing:.8px;line-height:1.6;
@@ -294,10 +294,8 @@
 
   /* ---------- gallery placeholder ---------- */
   .gallery-quote{max-width:460px;margin:14px auto 0;font-family:var(--font-display);font-style:italic;font-weight:600;font-size:19px;line-height:1.5;color:var(--ink);text-align:center;}
-  .gallery-grid{column-count:2;column-gap:10px;margin-top:22px;}
-  .gallery-grid .gallery-item{break-inside:avoid;margin:0 0 10px;border-radius:4px;overflow:hidden;}
-  .gallery-grid .gallery-item img{display:block;width:100%;height:auto;}
-  .gallery-grid .photo-placeholder{aspect-ratio:1/1;font-size:12px;break-inside:avoid;margin-bottom:10px;}
+  .gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px;}
+  .gallery-grid .photo-placeholder{aspect-ratio:1/1;font-size:12px;}
 
   /* ---------- RSVP ---------- */
   #rsvp{background:var(--navy-deep);color:#fff;}
@@ -359,7 +357,7 @@
   .admin-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
   .admin-field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:160px;}
   .admin-field label{font-size:13px;color:var(--ink-soft);}
-  .admin-field input{padding:10px;border:1px solid var(--line);border-radius:4px;font-size:15px;}
+  .admin-field input,.admin-field select{padding:10px;border:1px solid var(--line);border-radius:4px;font-size:15px;background:#fff;}
   .admin-btn{background:var(--navy);color:#fff;border:none;padding:11px 20px;border-radius:4px;font-size:14px;letter-spacing:.5px;}
   .admin-btn.secondary{background:var(--gold);}
   .admin-link-box{
@@ -487,6 +485,7 @@ let CONFIG = {
   "parents": {
     "enabled": true,
     "title": "Con la bendición de nuestros padres",
+    "groomRole": "La madre del novio",
     "groom": [
       "Teresa Betanco Aguilera"
     ],
@@ -553,6 +552,7 @@ let CONFIG = {
   "gallery": {
     "enabled": true,
     "title": "Nuestra Historia",
+    "focus": { "assets/galeria-4.jpg": "center 40%", "assets/galeria-6.jpg": "center 25%" },
     "quote": "En cada foto guardamos un pedazo de nuestra historia que un día decidimos unir para siempre",
     "photos": 4,
     "photoUrls": [
@@ -736,7 +736,7 @@ function parentsSection(){
     <div class="divider"></div>
     <div class="parents-grid">
       <div class="parents-col">
-        <p class="role">Padres del Novio</p>
+        <p class="role">${esc(p.groomRole || "La madre del novio")}</p>
         <p>${esc(p.groom[0]||"")}</p>
         <p>${esc(p.groom[1]||"")}</p>
       </div>
@@ -814,7 +814,8 @@ function gallerySection(){
   const uploaded = gal.photoUrls || [];
   let grid = "";
   if(uploaded.length){
-    grid = uploaded.map(src => `<div class="gallery-item"><img src="${src}" alt="Walter y Thatiana" loading="lazy"></div>`).join("");
+    const focus = gal.focus || {};
+    grid = uploaded.map(src => `<div class="photo-placeholder" style="border:none;padding:0;"><img src="${src}" style="width:100%;height:100%;object-fit:cover;object-position:${esc(focus[src] || "center")};"></div>`).join("");
   } else {
     for(let i=0;i<(gal.photos||4);i++){
       grid += `<div class="photo-placeholder">FOTO ${i+1}<br>agrega desde el panel admin</div>`;
@@ -1369,7 +1370,7 @@ async function initAdmin(){
         </div>
         <div class="admin-field" style="max-width:120px;">
           <label>Máx. personas</label>
-          <input type="number" id="new-guest-passes" value="2" min="1">
+          <select id="new-guest-passes">${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${n===2?"selected":""}>${n}</option>`).join("")}</select>
         </div>
         <button class="admin-btn" id="new-guest-btn">Generar enlace</button>
       </div>
