@@ -199,7 +199,7 @@
     margin:0 0 6px;
     line-height:1.25;
   }
-  .script{font-family:var(--font-script);font-size:clamp(26px,7vw,32px);color:var(--gold);}
+  .script{font-family:var(--font-script);font-size:clamp(26px,7vw,32px);color:var(--gold);font-weight:400;font-synthesis:none;}
   .body-text{
     font-family:var(--font-body);
     font-size:clamp(16px,4vw,18px);
@@ -222,7 +222,7 @@
   }
   .hero-inner{color:#fff;padding-bottom:26px;display:flex;flex-direction:column;align-items:center;padding-left:24px;padding-right:24px;}
   .hero-eyebrow{font-family:var(--font-label);letter-spacing:5px;text-transform:uppercase;font-size:clamp(12px,3.2vw,14px);color:rgba(255,255,255,0.65);margin:0 0 16px;}
-  .hero-names{--nm:clamp(48px,15vw,62px);font-family:var(--font-script);font-size:var(--nm);line-height:1.08;margin:0;font-weight:400;color:#fff;}
+  .hero-names{--nm:clamp(48px,15vw,62px);font-family:var(--font-script);font-size:var(--nm);line-height:1.08;margin:0;font-weight:400;font-synthesis:none;color:#fff;}
   .hero-and{display:block;font-family:var(--font-script);font-size:clamp(26px,7vw,34px);color:var(--gold);margin:0;line-height:1.2;position:relative;transform:translateY(calc(var(--nm) * -0.21));}
   .guest-line{
     margin-top:24px;font-family:var(--font-label);font-size:clamp(14px,3.6vw,16px);
@@ -725,7 +725,7 @@ function heroSection(guest){
   <section id="hero">
     <div class="hero-inner">
       <p class="hero-eyebrow">${esc(h.eyebrow)}</p>
-      <h1 class="hero-names">${esc(c.groom)}<span class="hero-and">y</span>${esc(c.bride)}</h1>
+      <h1 class="hero-names">${esc(c.groom)}<span class="hero-and">&amp;</span>${esc(c.bride)}</h1>
       <div class="guest-line">Pase reservado para<br><b>${esc(guest.name)}</b> ${guest.passes ? `· ${guest.passes==1 ? '1 persona' : 'hasta '+guest.passes+' personas'}` : ''}</div>
     </div>
     <div class="hero-photo-wrap">${photo}</div>
@@ -1329,7 +1329,7 @@ async function initAdmin(){
     <div class="admin-topbar">
       <div class="admin-title"><svg><use href="#rose"/></svg><h1><span class="adm-t1">Panel de la Boda</span><span class="adm-dash"> — </span><span class="adm-t2">${esc(CONFIG.couple.groom)} &amp; ${esc(CONFIG.couple.bride)}</span></h1></div>
       <div style="display:flex;gap:10px;">
-        <a class="admin-btn secondary" style="text-decoration:none;display:inline-flex;align-items:center;" href="${adminBaseUrl()}?invitado=Vista+Previa&pases=2&vista=1" target="_blank">Vista previa</a>
+        <a class="admin-btn secondary" style="text-decoration:none;display:inline-flex;align-items:center;" href="${adminBaseUrl()}?invitado=Vista+Previa&pases=7&vista=1" target="_blank">Vista previa</a>
         <button class="admin-btn secondary" id="export-btn">Exportar a Excel</button>
         <button class="admin-btn" id="logout-btn" style="background:#888;">Cerrar sesión</button>
       </div>
