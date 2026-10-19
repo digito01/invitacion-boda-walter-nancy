@@ -293,8 +293,11 @@
   .palette-dots span{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,0.1);display:inline-block;}
 
   /* ---------- gallery placeholder ---------- */
-  .gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;}
-  .gallery-grid .photo-placeholder{aspect-ratio:1/1;font-size:12px;}
+  .gallery-quote{max-width:460px;margin:14px auto 0;font-family:var(--font-display);font-style:italic;font-weight:600;font-size:19px;line-height:1.5;color:var(--ink);text-align:center;}
+  .gallery-grid{column-count:2;column-gap:10px;margin-top:22px;}
+  .gallery-grid .gallery-item{break-inside:avoid;margin:0 0 10px;border-radius:4px;overflow:hidden;}
+  .gallery-grid .gallery-item img{display:block;width:100%;height:auto;}
+  .gallery-grid .photo-placeholder{aspect-ratio:1/1;font-size:12px;break-inside:avoid;margin-bottom:10px;}
 
   /* ---------- RSVP ---------- */
   #rsvp{background:var(--navy-deep);color:#fff;}
@@ -373,6 +376,9 @@
   .admin-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
   .admin-pass-gate{max-width:340px;margin:100px auto;text-align:center;padding:30px;background:#fff;border-radius:6px;border:1px solid var(--line);}
   .admin-pass-gate input{width:100%;padding:10px;margin:14px 0;border:1px solid var(--line);border-radius:4px;}
+  #music-btn{position:fixed;right:16px;bottom:16px;z-index:60;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.3);}
+  #music-btn svg{width:22px;height:22px;}
+  .rsvp-preview-note{font-size:13px;text-align:center;color:var(--ink-soft);margin:0 0 12px;font-style:italic;}
   .pass-wrap{position:relative;}
   .pass-wrap input{padding-right:44px;}
   .pass-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:none;border:0;cursor:pointer;color:var(--navy);border-radius:4px;}
@@ -465,7 +471,7 @@
 ========================================================= -->
 <script>
 let CONFIG = {
-  "_rev": 2,
+  "_rev": 3,
   "adminPassword": "boda2026",
   "couple": {
     "groom": "Walter",
@@ -547,14 +553,19 @@ let CONFIG = {
   "gallery": {
     "enabled": true,
     "title": "Nuestra Historia",
+    "quote": "En cada foto guardamos un pedazo de nuestra historia que un día decidimos unir para siempre",
     "photos": 4,
     "photoUrls": [
       "assets/galeria-1.jpg",
       "assets/galeria-2.jpg",
       "assets/galeria-3.jpg",
       "assets/galeria-4.jpg",
-      "assets/galeria-5.jpg"
+      "assets/galeria-5.jpg",
+      "assets/galeria-6.jpg"
     ]
+  },
+  "music": {
+    "url": "assets/musica.mp3"
   },
   "rsvp": {
     "enabled": true,
@@ -687,7 +698,7 @@ async function resolveGuest(){
   }
   if(nombre){
     // modo rápido manual, sin guardar en el panel admin
-    return { id: null, name: decodeURIComponent(nombre.replace(/\+/g," ")), passes: pases ? parseInt(pases) : 1 };
+    return { id: null, name: decodeURIComponent(nombre.replace(/\+/g," ")), passes: pases ? parseInt(pases) : 1, preview: qs("vista") === "1" };
   }
   return null;
 }
@@ -803,7 +814,7 @@ function gallerySection(){
   const uploaded = gal.photoUrls || [];
   let grid = "";
   if(uploaded.length){
-    grid = uploaded.map(src => `<div class="photo-placeholder" style="border:none;padding:0;"><img src="${src}" style="width:100%;height:100%;object-fit:cover;"></div>`).join("");
+    grid = uploaded.map(src => `<div class="gallery-item"><img src="${src}" alt="Walter y Thatiana" loading="lazy"></div>`).join("");
   } else {
     for(let i=0;i<(gal.photos||4);i++){
       grid += `<div class="photo-placeholder">FOTO ${i+1}<br>agrega desde el panel admin</div>`;
@@ -813,6 +824,7 @@ function gallerySection(){
   <section class="section" id="gallery">
     <p class="eyebrow">Recuerdos</p>
     <h2 class="display-title">${esc(gal.title)}</h2>
+    ${gal.quote ? `<p class="gallery-quote">“${esc(gal.quote)}”</p>` : ""}
     <div class="gallery-grid">${grid}</div>
   </section>`;
 }
@@ -825,17 +837,24 @@ function rsvpIsClosed(){
 
 function rsvpFormHtml(guest){
   const maxPasses = guest.passes || 1;
-  let passOptions = `<option value="">Selecciona una opción</option>`;
+  const attendOptions = `<option value="">Selecciona una opción</option>
+      <option value="yes">Sí, asistiré</option>
+      <option value="0">No podremos asistir</option>`;
+  let countOptions = "";
   for(let i=1;i<=maxPasses;i++){
-    passOptions += `<option value="${i}">Sí, asistiré${maxPasses>1?` con ${i} ${i==1?'persona':'personas'}`:''}</option>`;
+    countOptions += `<option value="${i}">${i} ${i==1?'persona':'personas'}</option>`;
   }
-  passOptions += `<option value="0">No podremos asistir</option>`;
   return `
       <div class="rsvp-pass-line">${maxPasses==1 ? 'Tienes <b>1</b> pase reservado a tu nombre' : 'Tu invitación es para <b>hasta '+maxPasses+'</b> personas'}</div>
+      ${guest.preview ? `<p class="rsvp-preview-note">Vista previa: las respuestas enviadas desde aquí no se guardan.</p>` : ""}
       <form id="rsvp-form">
         <div class="field">
           <label>¿Nos acompañarás?</label>
-          <select id="f-attend" required>${passOptions}</select>
+          <select id="f-attend" required>${attendOptions}</select>
+        </div>
+        <div class="field" id="f-count-wrap" style="display:none;">
+          <label>¿Cuántas personas asistirán?</label>
+          <select id="f-count">${countOptions}</select>
         </div>
         <div class="field" id="f-names-wrap">
           <label>Nombre de los asistentes</label>
@@ -896,14 +915,26 @@ async function initRsvp(guest){
     const attend = document.getElementById("f-attend");
     const namesWrap = document.getElementById("f-names-wrap");
     const names = document.getElementById("f-names");
+    const countWrap = document.getElementById("f-count-wrap");
+    const count = document.getElementById("f-count");
+    const maxPasses = guest.passes || 1;
+    // Número final de personas: 0 = no asiste
+    function attendingValue(){
+      if(attend.value === "yes") return maxPasses > 1 ? count.value : "1";
+      return attend.value; // "" o "0"
+    }
     function sync(){
       const no = attend.value === "0";
+      const yes = attend.value === "yes";
+      countWrap.style.display = (yes && maxPasses > 1) ? "" : "none";
       namesWrap.style.display = no ? "none" : "";
-      names.required = !no && attend.value !== "";
+      names.required = yes;
     }
     attend.addEventListener("change", sync);
     if(prefill){
-      attend.value = prefill.attending;
+      const n = parseInt(prefill.attending) || 0;
+      attend.value = n > 0 ? "yes" : "0";
+      if(n > 0) count.value = String(Math.min(n, maxPasses));
       names.value = prefill.names || "";
       document.getElementById("f-phone").value = prefill.phone || "";
       document.getElementById("f-message").value = prefill.message || "";
@@ -918,13 +949,14 @@ async function initRsvp(guest){
       const data = {
         guestId: guest.id,
         guestName: guest.name,
-        attending: attend.value,
+        attending: attendingValue(),
         names: attend.value === "0" ? "" : names.value,
         phone: document.getElementById("f-phone").value,
         message: document.getElementById("f-message").value,
         respondedAt: new Date().toISOString()
       };
-      const ok = await storeSet("rsvps:" + (guest.id || uid()), data, true);
+      // En vista previa no se guarda nada; en un enlace sin ID se guarda aparte y el panel lo muestra como "sin enlace personal".
+      const ok = guest.preview ? true : await storeSet("rsvps:" + (guest.id || uid()), data, true);
       if(!ok){
         err.textContent = "No pudimos guardar tu respuesta. Revisa tu conexión e inténtalo de nuevo.";
         err.style.display = "block";
@@ -1068,10 +1100,33 @@ function revealTarget(targetId, displayValue){
 let envelopeClicked = false, envelopeAction = null;
 let configReadyResolve; const configReady = new Promise(r => configReadyResolve = r);
 function tryOpenEnvelope(){ if(envelopeClicked && envelopeAction){ const a = envelopeAction; envelopeAction = null; a(); } }
+// ---------- música de fondo (opcional): solo aparece si existe el archivo assets/musica.mp3 ----------
+let musicAudio = null;
+function startMusic(){
+  const m = CONFIG_DEFAULTS.music;
+  if(!m || !m.url || musicAudio) return;
+  const a = new Audio(m.url);
+  a.loop = true; a.volume = 0.6; musicAudio = a;
+  a.addEventListener("playing", () => {
+    if(document.getElementById("music-btn")) return;
+    const b = document.createElement("button");
+    b.id = "music-btn"; b.type = "button"; b.setAttribute("aria-label", "Silenciar música");
+    const on = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>`;
+    const off = on.replace("</svg>", `<path d="M3 3l18 18"/></svg>`);
+    b.innerHTML = on;
+    b.onclick = () => {
+      if(a.paused){ a.play().catch(()=>{}); b.innerHTML = on; b.setAttribute("aria-label","Silenciar música"); }
+      else { a.pause(); b.innerHTML = off; b.setAttribute("aria-label","Activar música"); }
+    };
+    document.body.appendChild(b);
+  }, { once: true });
+  const pr = a.play(); if(pr && pr.catch) pr.catch(() => {});
+}
 (function earlyEnvelope(){
   const screen = document.getElementById("envelope-screen");
   screen.addEventListener("click", () => {
     envelopeClicked = true;
+    startMusic();
     screen.classList.add("open");
     tryOpenEnvelope();
   }, { once: true });
@@ -1103,15 +1158,20 @@ async function loadConfig(){
   if(!main) return;
   const merged = deepMerge(CONFIG_DEFAULTS, main);
   // Si el contenido guardado es de una revisión anterior, estas secciones se actualizan con lo definido en el código.
+  let resetGallery = false;
   if((main._rev || 0) < CONFIG_DEFAULTS._rev){
     merged.giftTable = JSON.parse(JSON.stringify(CONFIG_DEFAULTS.giftTable));
     merged.dressCode = JSON.parse(JSON.stringify(CONFIG_DEFAULTS.dressCode));
+    // rev 3: galería de seis fotos y frase nueva
+    merged.gallery.photoUrls = CONFIG_DEFAULTS.gallery.photoUrls.slice();
+    merged.gallery.quote = CONFIG_DEFAULTS.gallery.quote;
+    resetGallery = true;
     merged._rev = CONFIG_DEFAULTS._rev;
   }
   const hero = await storeGet("site-hero", true);
   const gal = await storeGet("site-gallery", true);
   if(hero && typeof hero.photo === "string") merged.hero.heroPhoto = hero.photo;
-  if(gal && Array.isArray(gal.photos)) merged.gallery.photoUrls = gal.photos;
+  if(!resetGallery && gal && Array.isArray(gal.photos)) merged.gallery.photoUrls = gal.photos;
   CONFIG = merged;
 }
 async function saveConfig(){
@@ -1238,7 +1298,7 @@ async function initAdmin(){
     <div class="admin-topbar">
       <div class="admin-title"><svg><use href="#rose"/></svg><h1><span class="adm-t1">Panel de la Boda</span><span class="adm-dash"> — </span><span class="adm-t2">${esc(CONFIG.couple.groom)} &amp; ${esc(CONFIG.couple.bride)}</span></h1></div>
       <div style="display:flex;gap:10px;">
-        <a class="admin-btn secondary" style="text-decoration:none;display:inline-flex;align-items:center;" href="${adminBaseUrl()}?invitado=Vista+Previa&pases=2" target="_blank">Vista previa</a>
+        <a class="admin-btn secondary" style="text-decoration:none;display:inline-flex;align-items:center;" href="${adminBaseUrl()}?invitado=Vista+Previa&pases=2&vista=1" target="_blank">Vista previa</a>
         <button class="admin-btn secondary" id="export-btn">Exportar a Excel</button>
         <button class="admin-btn" id="logout-btn" style="background:#888;">Cerrar sesión</button>
       </div>
@@ -1498,6 +1558,44 @@ let guestsSearch = "";
 let guestsStatusFilter = "all";
 const GUESTS_PAGE_SIZE = 10;
 
+let orphanRsvps = [];
+// Respuestas enviadas desde enlaces sin ID personal (por ejemplo ?invitado=...&pases=...): no pertenecen a ninguna invitación del panel.
+async function loadOrphanRsvps(knownIds){
+  const keys = await storeList("rsvps:", true);
+  const out = [];
+  for(const k of keys){
+    const id = k.slice("rsvps:".length);
+    if(knownIds.has(id)) continue;
+    const r = await storeGet(k, true);
+    if(r) out.push({ key: k, ...r });
+  }
+  out.sort((a,b) => (b.respondedAt||"").localeCompare(a.respondedAt||""));
+  return out;
+}
+function orphanRsvpsHtml(){
+  if(!orphanRsvps.length) return "";
+  const rows = orphanRsvps.map(r => {
+    const going = parseInt(r.attending) > 0;
+    const status = going ? `<span class="status-pill status-yes">Asiste (${esc(r.attending)})</span>` : `<span class="status-pill status-no">No asiste</span>`;
+    return `<tr>
+      <td data-label="Nombre en el enlace" class="cell-name">${esc(r.guestName||"-")}</td>
+      <td data-label="Estado">${status}</td>
+      <td data-label="Asistentes">${esc(r.names||"-")}</td>
+      <td data-label="Teléfono">${esc(r.phone||"-")}</td>
+      <td data-label="Mensaje">${esc(r.message||"-")}</td>
+    </tr>`;
+  }).join("");
+  return `
+    <h3 style="font-family:var(--font-display);color:var(--navy);margin:32px 0 6px;">Respuestas sin enlace personal (${orphanRsvps.length})</h3>
+    <p class="small-note" style="margin:0 0 10px;">Llegaron desde un enlace que no se creó con “Generar invitación” (por ejemplo, uno escrito a mano con ?invitado=...). Para que cuenten en la lista de arriba, crea la invitación del invitado y envíale su enlace personal.</p>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Nombre en el enlace</th><th>Estado</th><th>Asistentes</th><th>Teléfono</th><th>Mensaje</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
 async function loadGuestsTable(){
   const container = document.getElementById("guests-table");
   container.innerHTML = `<p class="empty-state">Cargando…</p>`;
@@ -1512,6 +1610,7 @@ async function loadGuestsTable(){
   }
   items.sort((a,b) => (b.g.createdAt||"").localeCompare(a.g.createdAt||""));
   guestsCache = items;
+  orphanRsvps = await loadOrphanRsvps(new Set(items.map(x => x.g.id)));
   guestsPage = 1;
   renderGuestsTable();
 }
@@ -1535,7 +1634,7 @@ function goToGuestsPage(n){
 function renderGuestsTable(opts){
   const container = document.getElementById("guests-table");
   if(!guestsCache.length){
-    container.innerHTML = `<p class="empty-state">Aún no has generado invitaciones. Usa el formulario de arriba.</p>`;
+    container.innerHTML = `<p class="empty-state">Aún no has generado invitaciones. Usa el formulario de arriba.</p>` + orphanRsvpsHtml();
     return;
   }
 
@@ -1616,6 +1715,7 @@ function renderGuestsTable(opts){
       </table>
     </div>
     ${pager}
+    ${orphanRsvpsHtml()}
   `;
 
   if(opts && opts.keepFocus){
@@ -1643,10 +1743,21 @@ async function exportExcel(){
       "Link de invitación": `${adminBaseUrl()}?id=${g.id}`
     });
   }
-  if(!data.length){ alert("No hay invitados registrados todavía."); return; }
-  const ws = XLSX.utils.json_to_sheet(data);
+  const orphans = await loadOrphanRsvps(new Set(keys.map(k => k.slice("guests:".length))));
+  if(!data.length && !orphans.length){ alert("No hay invitados registrados todavía."); return; }
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Invitados");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Invitados");
+  if(orphans.length){
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(orphans.map(r => ({
+      "Nombre en el enlace": r.guestName || "",
+      "Confirmó": parseInt(r.attending) > 0 ? "Sí" : "No",
+      "Personas que asisten": r.attending,
+      "Nombre de asistentes": r.names || "",
+      "Teléfono": r.phone || "",
+      "Mensaje": r.message || "",
+      "Fecha de respuesta": r.respondedAt || ""
+    }))), "Sin enlace personal");
+  }
   XLSX.writeFile(wb, `Invitados_${CONFIG.couple.groom}_${CONFIG.couple.bride}.xlsx`);
 }
 </script>
