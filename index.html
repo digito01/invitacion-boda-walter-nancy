@@ -222,8 +222,8 @@
   }
   .hero-inner{color:#fff;padding-bottom:26px;display:flex;flex-direction:column;align-items:center;padding-left:24px;padding-right:24px;}
   .hero-eyebrow{font-family:var(--font-label);letter-spacing:5px;text-transform:uppercase;font-size:clamp(12px,3.2vw,14px);color:rgba(255,255,255,0.65);margin:0 0 16px;}
-  .hero-names{font-family:var(--font-script);font-size:clamp(48px,15vw,62px);line-height:1.08;margin:0;font-weight:400;color:#fff;}
-  .hero-and{display:block;font-family:var(--font-script);font-size:clamp(26px,7vw,34px);color:var(--gold);margin:0;line-height:1.2;}
+  .hero-names{--nm:clamp(48px,15vw,62px);font-family:var(--font-script);font-size:var(--nm);line-height:1.08;margin:0;font-weight:400;color:#fff;}
+  .hero-and{display:block;font-family:var(--font-script);font-size:clamp(26px,7vw,34px);color:var(--gold);margin:0;line-height:1.2;position:relative;transform:translateY(calc(var(--nm) * -0.21));}
   .guest-line{
     margin-top:24px;font-family:var(--font-label);font-size:clamp(14px,3.6vw,16px);
     color:rgba(255,255,255,0.78);letter-spacing:.8px;line-height:1.6;
@@ -376,6 +376,13 @@
   .admin-pass-gate input{width:100%;padding:10px;margin:14px 0;border:1px solid var(--line);border-radius:4px;}
   #music-btn{position:fixed;right:16px;bottom:16px;z-index:60;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.3);}
   #music-btn svg{width:22px;height:22px;}
+  .accounts{display:flex;flex-direction:column;gap:12px;margin:14px auto 0;max-width:340px;}
+  .account-card{background:rgba(255,255,255,.55);border:1px solid var(--gold);border-radius:6px;padding:16px 14px;text-align:center;}
+  .account-bank{font-family:var(--font-label);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:13px;color:var(--gold);margin-bottom:6px;}
+  .account-holder{font-family:var(--font-body);font-weight:600;font-size:14px;letter-spacing:.5px;color:var(--ink);margin-bottom:6px;}
+  .account-line{font-family:var(--font-body);font-size:16px;color:var(--ink);}
+  .account-line b{display:block;font-size:21px;letter-spacing:1px;margin-top:2px;color:var(--navy);}
+  .account-copy{margin-top:10px;background:none;border:1px solid var(--navy);color:var(--navy);border-radius:4px;padding:6px 14px;font-family:var(--font-label);font-weight:700;font-size:12px;letter-spacing:1px;cursor:pointer;}
   .rsvp-preview-note{font-size:13px;text-align:center;color:var(--ink-soft);margin:0 0 12px;font-style:italic;}
   .pass-wrap{position:relative;}
   .pass-wrap input{padding-right:44px;}
@@ -469,7 +476,7 @@
 ========================================================= -->
 <script>
 let CONFIG = {
-  "_rev": 3,
+  "_rev": 4,
   "adminPassword": "boda2026",
   "couple": {
     "groom": "Walter",
@@ -547,6 +554,11 @@ let CONFIG = {
         "label": "Sobre / Efectivo",
         "value": "Lo recibimos con mucho cariño"
       }
+    ],
+    "accountsIntro": "O, si prefieres, por depósito o transferencia:",
+    "accounts": [
+      { "bank": "BANPAIS", "holder": "GUILLEN MAYORGA THATIANA GERTRUDIS", "type": "Número de cuenta", "number": "213530104479" },
+      { "bank": "Banco de Occidente", "holder": "", "type": "Cuenta de Ahorros", "number": "21-502-009250-5" }
     ]
   },
   "gallery": {
@@ -799,12 +811,20 @@ function giftSection(){
   const g = CONFIG.giftTable;
   if(!g.enabled) return "";
   const opts = g.options.map(o => `<p style="font-family:var(--font-body);font-size:17px;margin:6px 0;"><b>${esc(o.label)}:</b> ${esc(o.value)}</p>`).join("");
+  const accounts = (g.accounts || []).map(a => `
+      <div class="account-card">
+        <div class="account-bank">${esc(a.bank)}</div>
+        ${a.holder ? `<div class="account-holder">${esc(a.holder)}</div>` : ""}
+        <div class="account-line"><span>${esc(a.type)}</span> <b>${esc(a.number)}</b></div>
+        <button type="button" class="account-copy" data-copy="${esc(a.number)}">Copiar número</button>
+      </div>`).join("");
   return `
   <section class="section" id="gifts">
     <p class="eyebrow">Con Cariño</p>
     <h2 class="display-title">${esc(g.title)}</h2>
     <p class="body-text">${esc(g.message)}</p>
     <div style="margin-top:16px;">${opts}</div>
+    ${accounts ? `<p class="body-text" style="margin-top:22px;">${esc(g.accountsIntro || "")}</p><div class="accounts">${accounts}</div>` : ""}
   </section>`;
 }
 
@@ -1085,6 +1105,16 @@ function startCountdown(){
   tick();
   setInterval(tick, 1000);
 }
+
+// ---------- copiar número de cuenta ----------
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest(".account-copy");
+  if(!b) return;
+  const done = () => { const t = b.textContent; b.textContent = "¡Copiado!"; setTimeout(() => b.textContent = t, 1500); };
+  const num = b.getAttribute("data-copy");
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(num).then(done, done); }
+  else { const t = document.createElement("textarea"); t.value = num; document.body.appendChild(t); t.select(); try{ document.execCommand("copy"); }catch(_){} t.remove(); done(); }
+});
 
 // ---------- sobre / intro ----------
 function revealTarget(targetId, displayValue){
