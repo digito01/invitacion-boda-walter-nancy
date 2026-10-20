@@ -476,7 +476,7 @@
 ========================================================= -->
 <script>
 let CONFIG = {
-  "_rev": 4,
+  "_rev": 5,
   "adminPassword": "boda2026",
   "couple": {
     "groom": "Walter",
@@ -492,7 +492,7 @@ let CONFIG = {
   "parents": {
     "enabled": true,
     "title": "Con la bendición de nuestros padres",
-    "groomRole": "La madre del novio",
+    "groomRole": "Madre del novio",
     "groom": [
       "Teresa Betanco Aguilera"
     ],
@@ -557,7 +557,7 @@ let CONFIG = {
     ],
     "accountsIntro": "O, si prefieres, por depósito o transferencia:",
     "accounts": [
-      { "bank": "BANPAIS", "holder": "GUILLEN MAYORGA THATIANA GERTRUDIS", "type": "Número de cuenta", "number": "213530104479" },
+      { "bank": "BANPAIS", "holder": "", "type": "Número de cuenta", "number": "213530104479" },
       { "bank": "Banco de Occidente", "holder": "", "type": "Cuenta de Ahorros", "number": "21-502-009250-5" }
     ]
   },
@@ -705,7 +705,7 @@ async function resolveGuest(){
 
   if(id){
     const g = await storeGet("guests:" + id, true);
-    if(g) return g;
+    if(g && !g.deletedAt) return g; // en la papelera = enlace desactivado
     return null; // link con id pero no existe -> invitación inválida
   }
   if(nombre){
@@ -748,7 +748,7 @@ function parentsSection(){
     <div class="divider"></div>
     <div class="parents-grid">
       <div class="parents-col">
-        <p class="role">${esc(p.groomRole || "La madre del novio")}</p>
+        <p class="role">${esc(p.groomRole || "Madre del novio")}</p>
         <p>${esc(p.groom[0]||"")}</p>
         <p>${esc(p.groom[1]||"")}</p>
       </div>
@@ -1193,10 +1193,13 @@ async function loadConfig(){
   if((main._rev || 0) < CONFIG_DEFAULTS._rev){
     merged.giftTable = JSON.parse(JSON.stringify(CONFIG_DEFAULTS.giftTable));
     merged.dressCode = JSON.parse(JSON.stringify(CONFIG_DEFAULTS.dressCode));
-    // rev 3: galería de seis fotos y frase nueva
-    merged.gallery.photoUrls = CONFIG_DEFAULTS.gallery.photoUrls.slice();
-    merged.gallery.quote = CONFIG_DEFAULTS.gallery.quote;
-    resetGallery = true;
+    merged.parents.groomRole = CONFIG_DEFAULTS.parents.groomRole;
+    // rev 3: galería de seis fotos y frase nueva (solo si venía de una revisión anterior a la 3)
+    if((main._rev || 0) < 3){
+      merged.gallery.photoUrls = CONFIG_DEFAULTS.gallery.photoUrls.slice();
+      merged.gallery.quote = CONFIG_DEFAULTS.gallery.quote;
+      resetGallery = true;
+    }
     merged._rev = CONFIG_DEFAULTS._rev;
   }
   const hero = await storeGet("site-hero", true);
@@ -1575,8 +1578,24 @@ async function createGuest(){
   await loadGuestsTable();
 }
 
+// Eliminar = mover a la papelera (el enlace deja de funcionar, pero la invitación y su respuesta se conservan y se pueden restaurar).
 async function deleteGuest(id, name){
-  if(!confirm(`¿Eliminar la invitación de "${name}"? El enlace dejará de funcionar y se borrará su respuesta de RSVP si la había. Esta acción no se puede deshacer.`)) return;
+  if(!confirm(`¿Mover la invitación de "${name}" a la papelera? Su enlace dejará de funcionar, pero podrás restaurarla cuando quieras.`)) return;
+  const g = await storeGet("guests:" + id, true);
+  if(!g){ await loadGuestsTable(); return; }
+  g.deletedAt = new Date().toISOString();
+  if(!(await storeSet("guests:" + id, g, true))){ alert("No se pudo mover a la papelera. Inténtalo de nuevo."); return; }
+  await loadGuestsTable();
+}
+async function restoreGuest(id){
+  const g = await storeGet("guests:" + id, true);
+  if(!g) { await loadGuestsTable(); return; }
+  delete g.deletedAt;
+  if(!(await storeSet("guests:" + id, g, true))){ alert("No se pudo restaurar. Inténtalo de nuevo."); return; }
+  await loadGuestsTable();
+}
+async function purgeGuest(id, name){
+  if(!confirm(`¿Eliminar DEFINITIVAMENTE la invitación de "${name}" y su respuesta? Esta acción no se puede deshacer.`)) return;
   await storeDelete("guests:" + id, true);
   await storeDelete("rsvps:" + id, true);
   await loadGuestsTable();
@@ -1591,6 +1610,37 @@ const GUESTS_PAGE_SIZE = 10;
 
 let orphanRsvps = [];
 let orphanEditing = null;
+let trashCache = [];
+function trashHtml(){
+  if(!trashCache.length) return "";
+  const rows = trashCache.map(({g, rsvp, statusKey}) => {
+    let status = "Sin responder";
+    if(statusKey === "yes") status = `Asiste (${esc(rsvp.attending)})`;
+    if(statusKey === "no") status = "No asiste";
+    const when = g.deletedAt ? new Date(g.deletedAt).toLocaleDateString("es-HN", { day:"numeric", month:"short" }) : "";
+    return `<tr>
+      <td data-label="Invitado" class="cell-name">${esc(g.name)}</td>
+      <td data-label="Pases">${g.passes}</td>
+      <td data-label="Respuesta">${status}</td>
+      <td data-label="Eliminada">${esc(when)}</td>
+      <td class="actions">
+        <button class="admin-btn btn-sm btn-open" onclick="restoreGuest('${g.id}')">Restaurar</button>
+        <button class="admin-btn btn-sm btn-del" onclick="purgeGuest('${g.id}', '${esc(g.name).replace(/'/g, "\\'")}')">Borrar definitivamente</button>
+      </td>
+    </tr>`;
+  }).join("");
+  return `
+    <details style="margin-top:32px;">
+      <summary style="cursor:pointer;font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--navy);">Papelera (${trashCache.length})</summary>
+      <p class="small-note" style="margin:8px 0 10px;">Estas invitaciones están desactivadas: su enlace no funciona. Restaura una para volver a activarla con su respuesta.</p>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Invitado</th><th>Pases</th><th>Respuesta</th><th>Eliminada</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </details>`;
+}
 function orphanConvertHtml(){
   if(orphanEditing === null || !orphanRsvps[orphanEditing]) return "";
   const r = orphanRsvps[orphanEditing];
@@ -1700,16 +1750,20 @@ async function loadGuestsTable(){
   container.innerHTML = `<p class="empty-state">Cargando…</p>`;
   const keys = await storeList("guests:", true);
   const items = [];
+  const trashed = [];
   for(const k of keys){
     const g = await storeGet(k, true);
     if(!g) continue;
     const rsvp = g.id ? await storeGet("rsvps:" + g.id, true) : null;
     const statusKey = rsvp ? (parseInt(rsvp.attending) > 0 ? "yes" : "no") : "pending";
+    if(g.deletedAt){ trashed.push({ g, rsvp, statusKey }); continue; }
     items.push({ g, rsvp, statusKey });
   }
   items.sort((a,b) => (b.g.createdAt||"").localeCompare(a.g.createdAt||""));
+  trashed.sort((a,b) => (b.g.deletedAt||"").localeCompare(a.g.deletedAt||""));
   guestsCache = items;
-  orphanRsvps = await loadOrphanRsvps(new Set(items.map(x => x.g.id)));
+  trashCache = trashed;
+  orphanRsvps = await loadOrphanRsvps(new Set(items.concat(trashed).map(x => x.g.id)));
   guestsPage = 1;
   renderGuestsTable();
 }
@@ -1733,7 +1787,7 @@ function goToGuestsPage(n){
 function renderGuestsTable(opts){
   const container = document.getElementById("guests-table");
   if(!guestsCache.length){
-    container.innerHTML = `<p class="empty-state">Aún no has generado invitaciones. Usa el formulario de arriba.</p>` + orphanRsvpsHtml();
+    container.innerHTML = `<p class="empty-state">Aún no has generado invitaciones. Usa el formulario de arriba.</p>` + orphanRsvpsHtml() + trashHtml();
     return;
   }
 
@@ -1815,6 +1869,7 @@ function renderGuestsTable(opts){
     </div>
     ${pager}
     ${orphanRsvpsHtml()}
+    ${trashHtml()}
   `;
 
   if(opts && opts.keepFocus){
@@ -1828,7 +1883,7 @@ async function exportExcel(){
   const data = [];
   for(const k of keys){
     const g = await storeGet(k, true);
-    if(!g) continue;
+    if(!g || g.deletedAt) continue;
     const rsvp = g.id ? await storeGet("rsvps:" + g.id, true) : null;
     data.push({
       "Invitado": g.name,
