@@ -1590,6 +1590,72 @@ let guestsStatusFilter = "all";
 const GUESTS_PAGE_SIZE = 10;
 
 let orphanRsvps = [];
+let orphanEditing = null;
+function orphanConvertHtml(){
+  if(orphanEditing === null || !orphanRsvps[orphanEditing]) return "";
+  const r = orphanRsvps[orphanEditing];
+  const att = parseInt(r.attending) || 0;
+  const nums = (from, to, sel) => { let o = ""; for(let i=from;i<=to;i++) o += `<option value="${i}" ${i===sel?"selected":""}>${i}</option>`; return o; };
+  const names = (r.names || "").trim();
+  return `
+    <div class="admin-card" id="orphan-convert" style="border:2px solid var(--gold);">
+      <h2 style="margin-bottom:6px;">Pasar a invitados</h2>
+      <p class="small-note" style="margin:0 0 12px;">Llegó con el nombre “${esc(r.guestName||"")}”. Corrige los datos si hace falta; se guardará tal como lo veas aquí.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+        <div class="admin-field" style="flex:1;min-width:200px;"><label>Nombre del invitado / familia</label><input type="text" id="oc-name" value="${esc(names || r.guestName || "")}"></div>
+        <div class="admin-field"><label>Pases asignados</label><select id="oc-passes">${nums(1,7,Math.max(att,2))}</select></div>
+        <div class="admin-field"><label>Personas que asisten</label><select id="oc-att"><option value="0" ${att===0?"selected":""}>0 (no asiste)</option>${nums(1,7,att)}</select></div>
+      </div>
+      <div class="admin-field" style="margin-top:12px;"><label>Nombres de los asistentes</label><input type="text" id="oc-names" value="${esc(names)}"></div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button class="admin-btn" onclick="saveOrphanConvert()">Guardar e invitar</button>
+        <button class="admin-btn secondary" onclick="orphanEditing=null;renderGuestsTable();">Cancelar</button>
+      </div>
+    </div>`;
+}
+function openOrphanConvert(i){
+  orphanEditing = i;
+  renderGuestsTable();
+  const el = document.getElementById("orphan-convert");
+  if(el) el.scrollIntoView({behavior:"smooth", block:"center"});
+}
+function waLink(phone, name, url){
+  const d = (phone || "").replace(/\D/g, "");
+  const num = d.length === 8 ? "504" + d : (d.length >= 11 ? d : "");
+  if(!num) return "";
+  const text = `Hola ${name}, este es tu enlace personal de la invitación a nuestra boda. Con él puedes ver o modificar tu confirmación de asistencia: ${url}`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+}
+async function saveOrphanConvert(){
+  const r = orphanRsvps[orphanEditing];
+  if(!r) return;
+  const name = document.getElementById("oc-name").value.trim();
+  const passes = parseInt(document.getElementById("oc-passes").value) || 1;
+  const att = parseInt(document.getElementById("oc-att").value) || 0;
+  const names = document.getElementById("oc-names").value.trim();
+  if(!name){ alert("Escribe el nombre del invitado"); return; }
+  if(att > passes){ alert("Las personas que asisten no pueden ser más que los pases asignados."); return; }
+  const id = uid();
+  const ok1 = await storeSet("guests:" + id, { id, name, passes, createdAt: new Date().toISOString() }, true);
+  const ok2 = await storeSet("rsvps:" + id, {
+    guestId: id, guestName: name, attending: String(att), names: att > 0 ? names : "",
+    phone: r.phone || "", message: r.message || "", respondedAt: r.respondedAt || new Date().toISOString()
+  }, true);
+  if(!ok1 || !ok2){ alert("No se pudo guardar. Revisa tu conexión e inténtalo de nuevo; la respuesta original no se ha borrado."); return; }
+  await storeDelete(r.key, true);
+  orphanEditing = null;
+  await loadGuestsTable();
+  const url = `${adminBaseUrl()}?id=${id}`;
+  const wa = waLink(r.phone, name, url);
+  document.getElementById("new-link-result").innerHTML = `
+    <div class="admin-link-box">
+      <span><b>${esc(name)}</b> ya está en la lista. Su enlace personal: ${esc(url)}</span>
+      <div class="link-actions"><a class="admin-btn btn-open" href="${url}" target="_blank" rel="noopener">Abrir invitación</a>
+      <button class="admin-btn btn-copy" onclick="navigator.clipboard.writeText('${url}')">Copiar</button>
+      ${wa ? `<a class="admin-btn" style="text-decoration:none;display:inline-flex;align-items:center;" href="${wa}" target="_blank" rel="noopener">Enviar por WhatsApp</a>` : ""}</div>
+    </div>`;
+  window.scrollTo({top:0, behavior:"smooth"});
+}
 // Respuestas enviadas desde enlaces sin ID personal (por ejemplo ?invitado=...&pases=...): no pertenecen a ninguna invitación del panel.
 async function loadOrphanRsvps(knownIds){
   const keys = await storeList("rsvps:", true);
@@ -1614,14 +1680,16 @@ function orphanRsvpsHtml(){
       <td data-label="Asistentes">${esc(r.names||"-")}</td>
       <td data-label="Teléfono">${esc(r.phone||"-")}</td>
       <td data-label="Mensaje">${esc(r.message||"-")}</td>
+      <td class="actions"><button class="admin-btn btn-sm btn-open" onclick="openOrphanConvert(${orphanRsvps.indexOf(r)})">Pasar a invitados</button></td>
     </tr>`;
   }).join("");
   return `
     <h3 style="font-family:var(--font-display);color:var(--navy);margin:32px 0 6px;">Respuestas sin enlace personal (${orphanRsvps.length})</h3>
-    <p class="small-note" style="margin:0 0 10px;">Llegaron desde un enlace que no se creó con “Generar invitación” (por ejemplo, uno escrito a mano con ?invitado=...). Para que cuenten en la lista de arriba, crea la invitación del invitado y envíale su enlace personal.</p>
+    <p class="small-note" style="margin:0 0 10px;">Llegaron desde un enlace que no se creó con “Generar invitación” (por ejemplo, uno escrito a mano con ?invitado=...). Usa “Pasar a invitados” para corregir el nombre y el número de personas, crear su invitación y darles su enlace personal; así cuentan en los totales y pueden modificar su respuesta.</p>
+    ${orphanConvertHtml()}
     <div class="admin-table-wrap">
       <table class="admin-table">
-        <thead><tr><th>Nombre en el enlace</th><th>Estado</th><th>Asistentes</th><th>Teléfono</th><th>Mensaje</th></tr></thead>
+        <thead><tr><th>Nombre en el enlace</th><th>Estado</th><th>Asistentes</th><th>Teléfono</th><th>Mensaje</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
