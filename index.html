@@ -383,6 +383,7 @@
   .account-line{font-family:var(--font-body);font-size:16px;color:var(--ink);}
   .account-line b{display:block;font-size:21px;letter-spacing:1px;margin-top:2px;color:var(--navy);}
   .account-copy{margin-top:10px;background:none;border:1px solid var(--navy);color:var(--navy);border-radius:4px;padding:6px 14px;font-family:var(--font-label);font-weight:700;font-size:12px;letter-spacing:1px;cursor:pointer;}
+  .cell-msg{max-width:280px;white-space:normal;overflow-wrap:anywhere;font-size:14px;}
   .rsvp-preview-note{font-size:13px;text-align:center;color:var(--ink-soft);margin:0 0 12px;font-style:italic;}
   .pass-wrap{position:relative;}
   .pass-wrap input{padding-right:44px;}
@@ -1801,7 +1802,7 @@ function renderGuestsTable(opts){
   const filtered = guestsCache.filter(({g, rsvp, statusKey}) => {
     if(guestsStatusFilter !== "all" && statusKey !== guestsStatusFilter) return false;
     if(q){
-      const haystack = `${g.name} ${rsvp?rsvp.names||"":""} ${rsvp?rsvp.phone||"":""}`.toLowerCase();
+      const haystack = `${g.name} ${rsvp?rsvp.names||"":""} ${rsvp?rsvp.phone||"":""} ${rsvp?rsvp.message||"":""}`.toLowerCase();
       if(!haystack.includes(q)) return false;
     }
     return true;
@@ -1824,6 +1825,7 @@ function renderGuestsTable(opts){
       <td data-label="Estado">${status}</td>
       <td data-label="Asistentes">${rsvp ? esc(rsvp.names||"") : "-"}</td>
       <td data-label="Teléfono">${rsvp ? esc(rsvp.phone||"") : "-"}</td>
+      <td data-label="Mensaje" class="cell-msg">${rsvp && rsvp.message ? esc(rsvp.message) : "-"}</td>
       <td class="actions">
         <a class="admin-btn btn-sm btn-open" href="${url}" target="_blank" rel="noopener">Abrir</a>
         <button class="admin-btn btn-sm btn-copy" onclick="navigator.clipboard.writeText('${url}')">Copiar link</button>
@@ -1832,7 +1834,7 @@ function renderGuestsTable(opts){
     </tr>`;
   }
   if(!rows){
-    rows = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">No se encontraron invitados con ese filtro o búsqueda.</td></tr>`;
+    rows = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-soft);">No se encontraron invitados con ese filtro o búsqueda.</td></tr>`;
   }
 
   let pager = "";
@@ -1853,7 +1855,7 @@ function renderGuestsTable(opts){
       <div class="admin-stat"><strong>${totalPassesConfirmed}</strong><span>Personas confirmadas</span></div>
     </div>
     <div class="admin-toolbar">
-      <input type="text" id="guests-search" placeholder="Buscar por nombre o teléfono…" value="${esc(guestsSearch)}" oninput="filterGuestsSearch(this.value)">
+      <input type="text" id="guests-search" placeholder="Buscar por nombre, teléfono o mensaje…" value="${esc(guestsSearch)}" oninput="filterGuestsSearch(this.value)">
       <select id="guests-filter" onchange="filterGuestsStatus(this.value)">
         <option value="all" ${guestsStatusFilter==="all"?"selected":""}>Todos los estados</option>
         <option value="yes" ${guestsStatusFilter==="yes"?"selected":""}>Confirmados</option>
@@ -1863,7 +1865,7 @@ function renderGuestsTable(opts){
     </div>
     <div class="admin-table-wrap">
       <table class="admin-table">
-        <thead><tr><th>Invitado</th><th>Pases</th><th>Estado</th><th>Asistentes</th><th>Teléfono</th><th></th></tr></thead>
+        <thead><tr><th>Invitado</th><th>Pases</th><th>Estado</th><th>Asistentes</th><th>Teléfono</th><th>Mensaje</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
