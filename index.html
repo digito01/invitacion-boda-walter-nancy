@@ -41,6 +41,9 @@
   try{
     firebase.initializeApp(firebaseConfig);
     firestoreDB = firebase.firestore();
+    // Safari/iPhone y los navegadores dentro de apps (WhatsApp, Facebook) a veces bloquean la conexión por defecto:
+    // este ajuste hace que cambie solo a un método compatible.
+    try{ firestoreDB.settings({ experimentalAutoDetectLongPolling: true, useFetchStreams: false, merge: true }); }catch(_){}
   }catch(e){ console.error("No se pudo inicializar Firebase:", e); }
 </script>
 <style>
@@ -95,7 +98,7 @@
 
   /* ---------- envelope intro ---------- */
   #envelope-screen{
-    position:fixed;inset:0;
+    position:fixed;top:0;right:0;bottom:0;left:0;
     max-width:480px;margin:0 auto;
     background:linear-gradient(160deg, var(--navy-deep), var(--navy));
     display:flex;align-items:center;justify-content:center;
@@ -112,7 +115,7 @@
     perspective:1000px;
   }
   .env-body{
-    position:absolute;inset:0;
+    position:absolute;top:0;right:0;bottom:0;left:0;
     background:linear-gradient(155deg,#7a1220,#52090f);
     border-radius:4px;
     box-shadow:0 25px 50px rgba(0,0,0,0.45);
@@ -291,6 +294,14 @@
   }
   .palette-dots{display:flex;justify-content:center;gap:10px;margin-top:18px;}
   .palette-dots span{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,0.1);display:inline-block;}
+
+  /* ---------- compatibilidad: iPhone con iOS antiguo (sin aspect-ratio) ---------- */
+  @supports not (aspect-ratio:1/1){
+    .envelope::before{content:"";display:block;padding-top:66.667%;}
+    .gallery-grid .photo-placeholder{position:relative;}
+    .gallery-grid .photo-placeholder::before{content:"";display:block;padding-top:100%;}
+    .gallery-grid .photo-placeholder img{position:absolute;top:0;left:0;}
+  }
 
   /* ---------- gallery placeholder ---------- */
   .gallery-quote{max-width:460px;margin:14px auto 0;font-family:var(--font-display);font-style:italic;font-weight:600;font-size:19px;line-height:1.5;color:var(--ink);text-align:center;}
@@ -699,14 +710,34 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 function esc(s){ return (s||"").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ---------- resolución del invitado a partir del link ----------
+async function storeGetStrict(key){
+  if(hasCloudStorage()){
+    const r = await window.storage.get(key, true);
+    return r ? JSON.parse(r.value) : null;
+  }
+  if(firestoreDB){
+    const doc = await firestoreDB.collection(FS_COLLECTION).doc(fsSafeId(key)).get();
+    return doc.exists ? doc.data().value : null;
+  }
+  const raw = localStorage.getItem(key);
+  return raw ? JSON.parse(raw) : null;
+}
+function withTimeout(promise, ms){
+  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+}
 async function resolveGuest(){
   const id = qs("id");
   const nombre = qs("invitado");
   const pases = qs("pases");
 
   if(id){
-    const g = await storeGet("guests:" + id, true);
-    if(g && !g.deletedAt) return g; // en la papelera = enlace desactivado
+    let g = null, failed = true;
+    for(let attempt = 0; attempt < 3 && failed; attempt++){
+      try{ g = await withTimeout(storeGetStrict("guests:" + id), 12000); failed = false; }
+      catch(e){ console.error("No se pudo leer la invitación (intento " + (attempt+1) + ")", e); }
+    }
+    if(failed) return { error: "network" };        // sin conexión: no es lo mismo que "invitación inválida"
+    if(g && !g.deletedAt) return g;                // en la papelera = enlace desactivado
     return null; // link con id pero no existe -> invitación inválida
   }
   if(nombre){
@@ -1158,6 +1189,7 @@ function startMusic(){
   const screen = document.getElementById("envelope-screen");
   screen.addEventListener("click", () => {
     envelopeClicked = true;
+    if(!envelopeAction){ const h = document.querySelector(".env-hint span"); if(h) h.textContent = "Abriendo tu invitación…"; }
     startMusic();
     screen.classList.add("open");
     tryOpenEnvelope();
@@ -1238,6 +1270,15 @@ async function boot(){
   }
 
   const guest = await resolveGuest();
+
+  if(guest && guest.error){
+    const gs = document.getElementById("gate-screen");
+    gs.innerHTML = `<h1>No pudimos cargar tu invitación</h1>
+      <p>Parece un problema de conexión.<br>Revisa tu internet e inténtalo de nuevo.</p>
+      <button type="button" onclick="location.reload()" style="margin-top:18px;padding:12px 26px;border:0;border-radius:4px;background:var(--navy);color:#fff;font-family:var(--font-label);font-size:15px;letter-spacing:1px;cursor:pointer;">Reintentar</button>`;
+    setupEnvelope(() => revealTarget("gate-screen", "flex"));
+    return;
+  }
 
   if(!guest){
     // El sobre igual se puede tocar; al abrirse revela el mensaje de invitación privada.
